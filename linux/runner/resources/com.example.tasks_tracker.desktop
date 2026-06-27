@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Tasks Tracker
+Comment=Track time for tasks
+Exec=tasks_tracker
+Icon=com.example.tasks_tracker
+Terminal=false
+Categories=Utility;
+StartupNotify=true
+StartupWMClass=com.example.tasks_tracker

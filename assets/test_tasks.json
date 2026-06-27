@@ -1,0 +1,129 @@
+{
+  "tasks": [
+    {
+      "id": "task-1",
+      "title": "Design Linux layout",
+      "description": "Prepare the first desktop screen for task tracking.",
+      "status": "active",
+      "createdAt": "2026-06-26T08:00:00.000Z",
+      "updatedAt": "2026-06-26T11:30:00.000Z",
+      "isArchived": false,
+      "archivedAt": null
+    },
+    {
+      "id": "task-2",
+      "title": "Model local data",
+      "description": "Create task and time entry data structures before the server exists.",
+      "status": "new",
+      "createdAt": "2026-06-26T09:00:00.000Z",
+      "updatedAt": "2026-06-26T09:00:00.000Z",
+      "isArchived": false,
+      "archivedAt": null
+    },
+    {
+      "id": "task-3",
+      "title": "Write sync notes",
+      "description": "Collect ideas for the future backend API contract.",
+      "status": "completed",
+      "createdAt": "2026-06-25T14:00:00.000Z",
+      "updatedAt": "2026-06-26T07:30:00.000Z",
+      "isArchived": false,
+      "archivedAt": null
+    },
+    {
+      "id": "task-4",
+      "title": "Try tray integration later",
+      "description": "Postponed until the Linux-only base workflow is stable.",
+      "status": "deferred",
+      "createdAt": "2026-06-25T15:00:00.000Z",
+      "updatedAt": "2026-06-26T07:45:00.000Z",
+      "isArchived": false,
+      "archivedAt": null
+    },
+    {
+      "id": "task-5",
+      "title": "Drop custom window chrome",
+      "description": "Canceled after switching back to the native KDE window frame.",
+      "status": "canceled",
+      "createdAt": "2026-06-25T11:00:00.000Z",
+      "updatedAt": "2026-06-26T12:10:00.000Z",
+      "isArchived": false,
+      "archivedAt": null
+    },
+    {
+      "id": "task-6",
+      "title": "Old prototype cleanup",
+      "description": "Archived example task for the archive view.",
+      "status": "completed",
+      "createdAt": "2026-06-24T12:00:00.000Z",
+      "updatedAt": "2026-06-26T07:55:00.000Z",
+      "isArchived": true,
+      "archivedAt": "2026-06-26T07:55:00.000Z"
+    }
+  ],
+  "timeEntries": [
+    {
+      "id": "entry-1",
+      "taskId": "task-1",
+      "startedAt": "2026-06-26T08:10:00.000Z",
+      "endedAt": "2026-06-26T08:45:00.000Z",
+      "note": "Initial sketch"
+    },
+    {
+      "id": "entry-2",
+      "taskId": "task-1",
+      "startedAt": "2026-06-26T09:05:15.000Z",
+      "endedAt": "2026-06-26T10:20:45.000Z",
+      "note": "Sidebar and detail layout"
+    },
+    {
+      "id": "entry-3",
+      "taskId": "task-1",
+      "startedAt": "2026-06-26T11:30:00.000Z",
+      "endedAt": null,
+      "note": "Running entry example"
+    },
+    {
+      "id": "entry-4",
+      "taskId": "task-3",
+      "startedAt": "2026-06-25T14:05:00.000Z",
+      "endedAt": "2026-06-25T14:55:00.000Z",
+      "note": "Draft sync assumptions"
+    },
+    {
+      "id": "entry-5",
+      "taskId": "task-3",
+      "startedAt": "2026-06-26T06:50:30.000Z",
+      "endedAt": "2026-06-26T07:30:00.000Z",
+      "note": "Finalize future API notes"
+    },
+    {
+      "id": "entry-6",
+      "taskId": "task-4",
+      "startedAt": "2026-06-25T15:10:00.000Z",
+      "endedAt": "2026-06-25T15:35:00.000Z",
+      "note": "Collected tray requirements"
+    },
+    {
+      "id": "entry-7",
+      "taskId": "task-5",
+      "startedAt": "2026-06-26T11:20:00.000Z",
+      "endedAt": "2026-06-26T11:48:00.000Z",
+      "note": "Checked custom chrome approach"
+    },
+    {
+      "id": "entry-8",
+      "taskId": "task-5",
+      "startedAt": "2026-06-26T12:00:00.000Z",
+      "endedAt": "2026-06-26T12:10:00.000Z",
+      "note": "Canceled after native frame worked"
+    },
+    {
+      "id": "entry-9",
+      "taskId": "task-6",
+      "startedAt": "2026-06-24T12:15:00.000Z",
+      "endedAt": "2026-06-24T12:45:00.000Z",
+      "note": "Archived cleanup work"
+    }
+  ]
+}
