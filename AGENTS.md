@@ -11,6 +11,8 @@ When changing client files:
 - Work from this `client/` directory for Flutter and Dart commands.
 - Format changed Dart files with `dart format`.
 - Keep Dart formatting at the configured 80-character line length.
+- Format Markdown description text, including commit message bodies, with
+  Prettier before using it.
 - Run Flutter analysis after Dart changes: `flutter analyze`.
 - For changes that affect runtime behavior or widgets, run the focused Flutter
   test or `flutter test` when practical.
