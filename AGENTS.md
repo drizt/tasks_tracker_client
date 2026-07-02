@@ -13,6 +13,8 @@ When changing client files:
 - Keep Dart formatting at the configured 80-character line length.
 - Format Markdown description text, including commit message bodies, with
   Prettier before using it.
+- When adding a file-level header comment, leave one empty line after it before
+  imports or code.
 - Run Flutter analysis after Dart changes: `flutter analyze`.
 - For changes that affect runtime behavior or widgets, run the focused Flutter
   test or `flutter test` when practical.
