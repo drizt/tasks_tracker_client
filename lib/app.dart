@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import 'data/json_task_repository.dart';
+import 'data/server_endpoint.dart';
+import 'data/web_socket_task_repository.dart';
+import 'data/web_socket_task_rpc_client.dart';
 import 'state/task_controller.dart';
 import 'screens/task_list_screen.dart';
 
@@ -13,16 +17,23 @@ class TasksTrackerApp extends StatefulWidget {
 
 class _TasksTrackerAppState extends State<TasksTrackerApp> {
   late final TaskController controller;
+  late final WebSocketTaskRepository repository;
 
   @override
   void initState() {
     super.initState();
-    controller = TaskController(JsonTaskRepository())..load();
+    repository = WebSocketTaskRepository(
+      client: WebSocketTaskRpcClient(defaultServerWebSocketUri()),
+    );
+    controller = TaskController(repository);
+    repository.onStoreChanged = controller.applyStore;
+    unawaited(controller.load());
   }
 
   @override
   void dispose() {
     controller.dispose();
+    unawaited(repository.close());
     super.dispose();
   }
 

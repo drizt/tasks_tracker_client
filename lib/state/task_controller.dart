@@ -6,6 +6,7 @@ import '../data/task_repository.dart';
 import '../data/task_store.dart';
 import '../models/task.dart';
 import '../models/time_entry.dart';
+import '../utils/task_id.dart';
 
 enum TaskListFilter {
   work,
@@ -116,13 +117,26 @@ class TaskController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void applyStore(TaskStore store) {
+    _tasks = store.tasks;
+    _timeEntries = store.timeEntries;
+    final selectedTask = _selectedTaskId == null
+        ? null
+        : _taskById(_selectedTaskId!);
+    if (selectedTask == null || !_matchesFilter(selectedTask)) {
+      _selectFirstVisibleTask();
+    }
+    _restoreOpenTimer();
+    notifyListeners();
+  }
+
   Future<void> addTask({
     required String title,
     required String description,
   }) async {
     final now = DateTime.now().toUtc();
     final task = Task(
-      id: 'task-${now.microsecondsSinceEpoch}',
+      id: createTaskId(),
       title: title.trim(),
       description: description.trim(),
       status: TaskStatus.newTask,
@@ -234,7 +248,7 @@ class TaskController extends ChangeNotifier {
     }
 
     final startedAt = DateTime.now().toUtc();
-    final entryId = 'entry-${startedAt.microsecondsSinceEpoch}';
+    final entryId = createTaskId();
     _activeTaskId = taskId;
     _activeEntryId = entryId;
     _activeStartedAt = startedAt;
@@ -290,11 +304,10 @@ class TaskController extends ChangeNotifier {
     required DateTime endedAt,
     String note = '',
   }) async {
-    final now = DateTime.now().toUtc();
     _timeEntries = [
       ..._timeEntries,
       TimeEntry(
-        id: 'entry-${now.microsecondsSinceEpoch}',
+        id: createTaskId(),
         taskId: taskId,
         startedAt: startedAt.toUtc(),
         endedAt: endedAt.toUtc(),

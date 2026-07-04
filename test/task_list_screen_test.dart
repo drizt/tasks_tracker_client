@@ -207,6 +207,34 @@ void main() {
 
     controller.dispose();
   });
+
+  testWidgets('shows selectable error text with copy action', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final controller = TaskController(_FailingTaskRepository());
+    await controller.load();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        scaffoldMessengerKey: GlobalKey<ScaffoldMessengerState>(),
+        home: TaskListScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not load tasks'), findsOneWidget);
+    expect(find.byType(SelectableText), findsOneWidget);
+    expect(find.textContaining('SocketException'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Copy'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Copy'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+
+    controller.dispose();
+  });
 }
 
 Future<TaskController> _pumpApp(WidgetTester tester, TaskStore store) async {
@@ -270,4 +298,14 @@ class _MemoryTaskRepository implements TaskRepository {
   Future<void> save(TaskStore store) async {
     this.store = store;
   }
+}
+
+class _FailingTaskRepository implements TaskRepository {
+  @override
+  Future<TaskStore> load() async {
+    throw Exception('SocketException: connection refused');
+  }
+
+  @override
+  Future<void> save(TaskStore store) async {}
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/task.dart';
 import '../models/time_entry.dart';
@@ -541,21 +542,44 @@ class _ErrorView extends StatelessWidget {
             const Icon(Icons.error_outline_rounded, size: 42),
             const SizedBox(height: 12),
             Text(
-              'Could not load local task data',
+              'Could not load tasks',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
+            SelectableText(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Retry'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _copyErrorMessage(context),
+                  icon: const Icon(Icons.copy_rounded),
+                  label: const Text('Copy'),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _copyErrorMessage(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: message));
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Error copied')));
   }
 }
 
