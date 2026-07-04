@@ -1,11 +1,11 @@
 {
-    "name": "tasks_tracker",
-    "short_name": "tasks_tracker",
+    "name": "Tasks Tracker",
+    "short_name": "Tasks",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Tasks Tracker time and task manager.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
