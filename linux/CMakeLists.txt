@@ -4,10 +4,10 @@ project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "tasks_tracker")
+set(BINARY_NAME "tasks_tracker_client")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.example.tasks_tracker")
+set(APPLICATION_ID "io.github.drizt.tasks_tracker_client")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -102,7 +102,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/runner/resources/app_icon_256.png"
   RENAME "${APPLICATION_ID}.png"
   COMPONENT Runtime)
 
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/runner/resources/com.example.tasks_tracker.desktop"
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/runner/resources/io.github.drizt.tasks_tracker_client.desktop"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}/applications"
   COMPONENT Runtime)
 

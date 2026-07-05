@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tasks_tracker/data/task_repository.dart';
-import 'package:tasks_tracker/data/task_store.dart';
-import 'package:tasks_tracker/models/task.dart';
-import 'package:tasks_tracker/models/time_entry.dart';
-import 'package:tasks_tracker/state/task_controller.dart';
+import 'package:tasks_tracker_client/data/task_repository.dart';
+import 'package:tasks_tracker_client/data/task_store.dart';
+import 'package:tasks_tracker_client/models/task.dart';
+import 'package:tasks_tracker_client/models/time_entry.dart';
+import 'package:tasks_tracker_client/state/task_controller.dart';
 
 void main() {
   test('loads tasks and calculates saved time', () async {

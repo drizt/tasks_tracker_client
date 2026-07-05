@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tasks_tracker/utils/duration_format.dart';
+import 'package:tasks_tracker_client/utils/duration_format.dart';
 
 void main() {
   test('formats date time with seconds', () {

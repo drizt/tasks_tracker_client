@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tasks_tracker/models/task.dart';
-import 'package:tasks_tracker/utils/task_status_style.dart';
+import 'package:tasks_tracker_client/models/task.dart';
+import 'package:tasks_tracker_client/utils/task_status_style.dart';
 
 void main() {
   test('uses a distinct color for every task status', () {

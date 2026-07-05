@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tasks_tracker/data/server_endpoint.dart';
+import 'package:tasks_tracker_client/data/server_endpoint.dart';
 
 void main() {
   test('uses the configured websocket endpoint when provided', () {
@@ -13,7 +13,9 @@ void main() {
 
   test('uses the local task server when the base uri has no host', () {
     final uri = defaultServerWebSocketUri(
-      baseUri: Uri.parse('file:///home/taurus/tasks_tracker/client/'),
+      baseUri: Uri.parse(
+        'file:///home/taurus/tasks_tracker/tasks_tracker_client/',
+      ),
     );
 
     expect(uri.toString(), 'ws://localhost:3000/ws');

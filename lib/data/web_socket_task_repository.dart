@@ -7,7 +7,7 @@ import 'task_store.dart';
 class WebSocketTaskRepository implements TaskRepository {
   WebSocketTaskRepository({
     required this.client,
-    this.clientId = 'tasks-tracker-flutter',
+    this.clientId = 'tasks-tracker-client',
   });
 
   final TaskRpcClient client;

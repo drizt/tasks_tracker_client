@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tasks_tracker/data/task_rpc_client.dart';
-import 'package:tasks_tracker/data/task_store.dart';
-import 'package:tasks_tracker/data/web_socket_task_repository.dart';
-import 'package:tasks_tracker/models/task.dart';
-import 'package:tasks_tracker/models/time_entry.dart';
+import 'package:tasks_tracker_client/data/task_rpc_client.dart';
+import 'package:tasks_tracker_client/data/task_store.dart';
+import 'package:tasks_tracker_client/data/web_socket_task_repository.dart';
+import 'package:tasks_tracker_client/models/task.dart';
+import 'package:tasks_tracker_client/models/time_entry.dart';
 
 void main() {
   test('loads tasks through JSON-RPC', () async {
@@ -15,7 +15,7 @@ void main() {
     expect(client.connected, isTrue);
     expect(client.requests.first.method, 'auth.hello');
     expect(client.requests.first.parameters, {
-      'clientId': 'tasks-tracker-flutter',
+      'clientId': 'tasks-tracker-client',
       'protocolVersion': 1,
     });
     expect(client.requests[1].method, 'tasks.list');
@@ -274,7 +274,10 @@ class _FakeTaskRpcClient implements TaskRpcClient {
     requests.add((method: method, parameters: parameters));
 
     return switch (method) {
-      'auth.hello' => {'serverName': 'tasks-tracker', 'protocolVersion': 1},
+      'auth.hello' => {
+        'serverName': 'tasks-tracker-server',
+        'protocolVersion': 1,
+      },
       'tasks.list' => {
         'tasks': [
           {

@@ -1,3 +1,3 @@
-# tasks_tracker
+# tasks_tracker_client
 
-A new Flutter project.
+Tasks Tracker personal client application.

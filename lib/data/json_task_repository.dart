@@ -79,6 +79,6 @@ class JsonTaskRepository implements TaskRepository {
       return 'tasks.json';
     }
 
-    return '$home/.local/share/tasks_tracker/tasks.json';
+    return '$home/.local/share/tasks_tracker_client/tasks.json';
   }
 }

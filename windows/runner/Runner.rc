@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "tasks_tracker" "\0"
+            VALUE "CompanyName", "io.github.drizt" "\0"
+            VALUE "FileDescription", "Tasks Tracker" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "tasks_tracker" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "tasks_tracker.exe" "\0"
-            VALUE "ProductName", "tasks_tracker" "\0"
+            VALUE "InternalName", "tasks_tracker_client" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 io.github.drizt. All rights reserved." "\0"
+            VALUE "OriginalFilename", "tasks_tracker_client.exe" "\0"
+            VALUE "ProductName", "Tasks Tracker" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

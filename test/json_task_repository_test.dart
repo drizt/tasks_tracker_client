@@ -2,15 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tasks_tracker/data/json_task_repository.dart';
-import 'package:tasks_tracker/data/task_store.dart';
+import 'package:tasks_tracker_client/data/json_task_repository.dart';
+import 'package:tasks_tracker_client/data/task_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('seeds the runtime file when it does not exist', () async {
     final directory = await Directory.systemTemp.createTemp(
-      'tasks_tracker_repository_test_',
+      'tasks_tracker_client_repository_test_',
     );
     addTearDown(() => directory.delete(recursive: true));
     final file = File('${directory.path}/tasks.json');
@@ -25,7 +25,7 @@ void main() {
 
   test('recovers from an empty runtime file', () async {
     final directory = await Directory.systemTemp.createTemp(
-      'tasks_tracker_repository_test_',
+      'tasks_tracker_client_repository_test_',
     );
     addTearDown(() => directory.delete(recursive: true));
     final file = File('${directory.path}/tasks.json');
@@ -40,7 +40,7 @@ void main() {
 
   test('backs up invalid JSON and reseeds the runtime file', () async {
     final directory = await Directory.systemTemp.createTemp(
-      'tasks_tracker_repository_test_',
+      'tasks_tracker_client_repository_test_',
     );
     addTearDown(() => directory.delete(recursive: true));
     final file = File('${directory.path}/tasks.json');
@@ -61,7 +61,7 @@ void main() {
 
   test('saves valid JSON atomically', () async {
     final directory = await Directory.systemTemp.createTemp(
-      'tasks_tracker_repository_test_',
+      'tasks_tracker_client_repository_test_',
     );
     addTearDown(() => directory.delete(recursive: true));
     final file = File('${directory.path}/tasks.json');

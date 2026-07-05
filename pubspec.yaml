@@ -1,5 +1,5 @@
-name: tasks_tracker
-description: "A new Flutter project."
+name: tasks_tracker_client
+description: "Tasks Tracker personal client application."
 publish_to: 'none'
 version: 0.1.0+1
 

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tasks_tracker/data/task_repository.dart';
-import 'package:tasks_tracker/data/task_store.dart';
-import 'package:tasks_tracker/models/task.dart';
-import 'package:tasks_tracker/models/time_entry.dart';
-import 'package:tasks_tracker/screens/task_list_screen.dart';
-import 'package:tasks_tracker/state/task_controller.dart';
+import 'package:tasks_tracker_client/data/task_repository.dart';
+import 'package:tasks_tracker_client/data/task_store.dart';
+import 'package:tasks_tracker_client/models/task.dart';
+import 'package:tasks_tracker_client/models/time_entry.dart';
+import 'package:tasks_tracker_client/screens/task_list_screen.dart';
+import 'package:tasks_tracker_client/state/task_controller.dart';
 
 void main() {
   testWidgets('adds a task from the sidebar', (tester) async {

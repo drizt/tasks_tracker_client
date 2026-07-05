@@ -2,9 +2,9 @@
 Type=Application
 Name=Tasks Tracker
 Comment=Track time for tasks
-Exec=tasks_tracker
-Icon=com.example.tasks_tracker
+Exec=tasks_tracker_client
+Icon=io.github.drizt.tasks_tracker_client
 Terminal=false
 Categories=Utility;
 StartupNotify=true
-StartupWMClass=com.example.tasks_tracker
+StartupWMClass=io.github.drizt.tasks_tracker_client
