@@ -8,7 +8,8 @@ tooling, linting, and formatting.
 
 When changing client files:
 
-- Work from this `client/` directory for Flutter and Dart commands.
+- Work from this `tasks_tracker_client/` directory for Flutter and Dart
+  commands.
 - Format changed Dart files with `dart format`.
 - Keep Dart formatting at the configured 80-character line length.
 - Format Markdown description text, including commit message bodies, with
@@ -32,7 +33,7 @@ This emulates the Codium/VS Code setup:
 ## Database Structure
 
 - Client-side data structures must mirror the database structure defined by the
-  server SQL migrations in `../server/prisma/migrations/*.sql`.
+  server SQL migrations in `../tasks-tracker-server/prisma/migrations/*.sql`.
 - Mirror the server ID conventions: enum-like lookup rows use integer IDs, and
   app-created records use `VARCHAR(191)` IDs containing LUUID values.
 - Coordinate server-facing behavior through the JSON API and WebSocket
