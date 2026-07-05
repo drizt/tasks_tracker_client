@@ -52,4 +52,29 @@ void main() {
 
     expect(uri.toString(), 'wss://tasks.example.test:8443/ws');
   });
+
+  test('normalizes a bare server host to the default websocket path', () {
+    final uri = normalizeServerWebSocketUri('localhost:3000');
+
+    expect(uri.toString(), 'ws://localhost:3000/ws');
+  });
+
+  test('normalizes http server urls to websocket urls', () {
+    final uri = normalizeServerWebSocketUri('https://tasks.example.test');
+
+    expect(uri.toString(), 'wss://tasks.example.test/ws');
+  });
+
+  test('keeps an explicit websocket path', () {
+    final uri = normalizeServerWebSocketUri('wss://tasks.example.test/rpc');
+
+    expect(uri.toString(), 'wss://tasks.example.test/rpc');
+  });
+
+  test('rejects unsupported server url schemes', () {
+    expect(
+      () => normalizeServerWebSocketUri('ftp://tasks.example.test/ws'),
+      throwsFormatException,
+    );
+  });
 }

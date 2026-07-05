@@ -29,6 +29,44 @@ Uri defaultServerWebSocketUri({
   );
 }
 
+Uri normalizeServerWebSocketUri(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    throw const FormatException('Server URL is required');
+  }
+
+  final source = _hasUriScheme(trimmed) ? trimmed : 'ws://$trimmed';
+  final uri = Uri.tryParse(source);
+  if (uri == null || uri.host.isEmpty) {
+    throw const FormatException('Enter a valid server URL');
+  }
+
+  final scheme = switch (uri.scheme.toLowerCase()) {
+    'ws' => 'ws',
+    'wss' => 'wss',
+    'http' => 'ws',
+    'https' => 'wss',
+    _ => throw const FormatException(
+      'Server URL must use ws, wss, http, or https',
+    ),
+  };
+  final path = uri.path.isEmpty || uri.path == '/'
+      ? _serverWebSocketPath
+      : uri.path;
+
+  return Uri(
+    scheme: scheme,
+    host: uri.host,
+    port: uri.hasPort ? uri.port : 0,
+    path: path,
+    query: uri.query,
+  );
+}
+
+bool _hasUriScheme(String value) {
+  return RegExp(r'^[A-Za-z][A-Za-z0-9+.-]*://').hasMatch(value);
+}
+
 String _webSocketSchemeFor(Uri uri) {
   return uri.scheme == 'https' ? 'wss' : 'ws';
 }

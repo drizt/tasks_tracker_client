@@ -119,6 +119,27 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('opens server settings from the sidebar', (tester) async {
+    var openCount = 0;
+    final controller = await _pumpApp(
+      tester,
+      _storeWithTask(),
+      onConfigureServer: (_) async {
+        openCount += 1;
+      },
+    );
+
+    await tester.tap(
+      find.byTooltip('Server settings (ws://localhost:3000/ws)'),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(openCount, 1);
+
+    controller.dispose();
+  });
+
   testWidgets('stopping timer creates a saved time entry', (tester) async {
     final controller = await _pumpApp(
       tester,
@@ -212,13 +233,20 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
+    var openCount = 0;
     final controller = TaskController(_FailingTaskRepository());
     await controller.load();
 
     await tester.pumpWidget(
       MaterialApp(
         scaffoldMessengerKey: GlobalKey<ScaffoldMessengerState>(),
-        home: TaskListScreen(controller: controller),
+        home: TaskListScreen(
+          controller: controller,
+          serverUri: Uri.parse('ws://localhost:3000/ws'),
+          onConfigureServer: (_) async {
+            openCount += 1;
+          },
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -227,17 +255,25 @@ void main() {
     expect(find.byType(SelectableText), findsOneWidget);
     expect(find.textContaining('SocketException'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Copy'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Server'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Copy'));
     await tester.pump();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Server'));
+    await tester.pump();
 
     expect(tester.takeException(), isNull);
+    expect(openCount, 1);
 
     controller.dispose();
   });
 }
 
-Future<TaskController> _pumpApp(WidgetTester tester, TaskStore store) async {
+Future<TaskController> _pumpApp(
+  WidgetTester tester,
+  TaskStore store, {
+  Future<void> Function(BuildContext context)? onConfigureServer,
+}) async {
   await tester.binding.setSurfaceSize(const Size(1400, 900));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -245,7 +281,13 @@ Future<TaskController> _pumpApp(WidgetTester tester, TaskStore store) async {
   await controller.load();
 
   await tester.pumpWidget(
-    MaterialApp(home: TaskListScreen(controller: controller)),
+    MaterialApp(
+      home: TaskListScreen(
+        controller: controller,
+        serverUri: Uri.parse('ws://localhost:3000/ws'),
+        onConfigureServer: onConfigureServer ?? (_) async {},
+      ),
+    ),
   );
   await tester.pumpAndSettle();
 

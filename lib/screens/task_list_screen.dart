@@ -10,9 +10,16 @@ import '../widgets/active_timer_bar.dart';
 import '../widgets/task_card.dart';
 
 class TaskListScreen extends StatelessWidget {
-  const TaskListScreen({required this.controller, super.key});
+  const TaskListScreen({
+    required this.controller,
+    required this.serverUri,
+    required this.onConfigureServer,
+    super.key,
+  });
 
   final TaskController controller;
+  final Uri serverUri;
+  final Future<void> Function(BuildContext context) onConfigureServer;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +30,13 @@ class TaskListScreen extends StatelessWidget {
           body: SafeArea(
             child: Column(
               children: [
-                Expanded(child: _Body(controller: controller)),
+                Expanded(
+                  child: _Body(
+                    controller: controller,
+                    serverUri: serverUri,
+                    onConfigureServer: onConfigureServer,
+                  ),
+                ),
                 ActiveTimerBar(controller: controller),
               ],
             ),
@@ -35,9 +48,15 @@ class TaskListScreen extends StatelessWidget {
 }
 
 class _Body extends StatefulWidget {
-  const _Body({required this.controller});
+  const _Body({
+    required this.controller,
+    required this.serverUri,
+    required this.onConfigureServer,
+  });
 
   final TaskController controller;
+  final Uri serverUri;
+  final Future<void> Function(BuildContext context) onConfigureServer;
 
   @override
   State<_Body> createState() => _BodyState();
@@ -61,7 +80,11 @@ class _BodyState extends State<_Body> {
     }
 
     if (controller.error != null) {
-      return _ErrorView(message: controller.error!, onRetry: controller.load);
+      return _ErrorView(
+        message: controller.error!,
+        onRetry: controller.load,
+        onConfigureServer: widget.onConfigureServer,
+      );
     }
 
     return LayoutBuilder(
@@ -78,7 +101,11 @@ class _BodyState extends State<_Body> {
           children: [
             SizedBox(
               width: effectiveSidebarWidth,
-              child: _TaskSidebar(controller: controller),
+              child: _TaskSidebar(
+                controller: controller,
+                serverUri: widget.serverUri,
+                onConfigureServer: widget.onConfigureServer,
+              ),
             ),
             _ResizeHandle(
               width: _resizeHandleWidth,
@@ -128,9 +155,15 @@ class _ResizeHandle extends StatelessWidget {
 }
 
 class _TaskSidebar extends StatelessWidget {
-  const _TaskSidebar({required this.controller});
+  const _TaskSidebar({
+    required this.controller,
+    required this.serverUri,
+    required this.onConfigureServer,
+  });
 
   final TaskController controller;
+  final Uri serverUri;
+  final Future<void> Function(BuildContext context) onConfigureServer;
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +184,12 @@ class _TaskSidebar extends StatelessWidget {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
+                IconButton(
+                  tooltip: 'Server settings (${serverUri.toString()})',
+                  onPressed: () => onConfigureServer(context),
+                  icon: const Icon(Icons.settings_rounded),
+                ),
+                const SizedBox(width: 4),
                 IconButton.filledTonal(
                   tooltip: 'Add task',
                   onPressed: () => _showTaskDialog(context, controller),
@@ -526,10 +565,15 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
+  const _ErrorView({
+    required this.message,
+    required this.onRetry,
+    required this.onConfigureServer,
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final Future<void> Function(BuildContext context) onConfigureServer;
 
   @override
   Widget build(BuildContext context) {
@@ -562,6 +606,11 @@ class _ErrorView extends StatelessWidget {
                   onPressed: () => _copyErrorMessage(context),
                   icon: const Icon(Icons.copy_rounded),
                   label: const Text('Copy'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => onConfigureServer(context),
+                  icon: const Icon(Icons.settings_rounded),
+                  label: const Text('Server'),
                 ),
               ],
             ),
