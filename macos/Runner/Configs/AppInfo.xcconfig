@@ -11,4 +11,4 @@ PRODUCT_NAME = Tasks Tracker
 PRODUCT_BUNDLE_IDENTIFIER = io.github.drizt.tasksTrackerClient
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 io.github.drizt. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Ivan Romanov <drizt72@zoho.eu>
