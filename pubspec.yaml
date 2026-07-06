@@ -10,13 +10,20 @@ dependencies:
   flutter:
     sdk: flutter
   json_rpc_2: ^4.1.0
+  nativeapi:
+    path: third_party/nativeapi-flutter/packages/nativeapi
   ulid: ^2.0.1
   web_socket_channel: ^3.0.3
+  window_manager: ^0.5.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+dependency_overrides:
+  cnativeapi:
+    path: third_party/nativeapi-flutter/packages/cnativeapi
 
 flutter:
   uses-material-design: true

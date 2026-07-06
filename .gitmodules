@@ -1,0 +1,4 @@
+[submodule "third_party/nativeapi-flutter"]
+	path = third_party/nativeapi-flutter
+	url = https://github.com/drizt/nativeapi-flutter.git
+	branch = fix-kde-wayland-tray
