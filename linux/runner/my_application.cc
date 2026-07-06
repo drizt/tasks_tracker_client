@@ -7,9 +7,12 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
+#include <gdk/gdk.h>
+
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  FlMethodChannel* window_channel;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
@@ -40,6 +43,57 @@ static void set_window_icon(GtkWindow* window) {
   if (g_file_test(icon_path, G_FILE_TEST_EXISTS)) {
     (void)gtk_window_set_icon_from_file(window, icon_path, nullptr);
   }
+}
+
+static const gchar* get_task_window_state(GtkWindow* window) {
+  GtkWidget* widget = GTK_WIDGET(window);
+  if (!gtk_widget_get_visible(widget)) {
+    return "hidden";
+  }
+
+  GdkWindow* gdk_window = gtk_widget_get_window(widget);
+  if (gdk_window == nullptr) {
+    return "hidden";
+  }
+
+  const GdkWindowState state = gdk_window_get_state(gdk_window);
+  if ((state & GDK_WINDOW_STATE_ICONIFIED) != 0 ||
+      (state & GDK_WINDOW_STATE_WITHDRAWN) != 0) {
+    return "minimized";
+  }
+
+  if (!gtk_widget_get_mapped(widget) || !gdk_window_is_visible(gdk_window)) {
+    return "minimized";
+  }
+
+  return "shown";
+}
+
+static void window_method_call_cb(FlMethodChannel*, FlMethodCall* method_call,
+                                  gpointer user_data) {
+  GtkWindow* window = GTK_WINDOW(user_data);
+  g_autoptr(FlMethodResponse) response = nullptr;
+  const gchar* method = fl_method_call_get_name(method_call);
+
+  if (g_strcmp0(method, "getState") == 0) {
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(
+        fl_value_new_string(get_task_window_state(window))));
+  } else {
+    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  }
+
+  fl_method_call_respond(method_call, response, nullptr);
+}
+
+static void register_window_channel(MyApplication* self, FlView* view,
+                                    GtkWindow* window) {
+  FlEngine* engine = fl_view_get_engine(view);
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  self->window_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(engine), "tasks_tracker/window",
+      FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(
+      self->window_channel, window_method_call_cb, window, nullptr);
 }
 
 // Implements GApplication::activate.
@@ -98,6 +152,7 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+  register_window_channel(self, view, window);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
@@ -144,6 +199,7 @@ static void my_application_shutdown(GApplication* application) {
 // Implements GObject::dispose.
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
+  g_clear_object(&self->window_channel);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }

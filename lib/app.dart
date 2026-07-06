@@ -10,6 +10,8 @@ import 'data/web_socket_task_rpc_client.dart';
 import 'screens/server_settings_dialog.dart';
 import 'state/task_controller.dart';
 import 'screens/task_list_screen.dart';
+import 'tray/task_tray.dart';
+import 'window/task_window.dart';
 
 class TasksTrackerApp extends StatefulWidget {
   const TasksTrackerApp({super.key});
@@ -20,6 +22,8 @@ class TasksTrackerApp extends StatefulWidget {
 
 class _TasksTrackerAppState extends State<TasksTrackerApp> {
   late final ClientSettingsStore settingsStore;
+  late final TaskTray taskTray;
+  late final TaskWindow taskWindow;
   TaskController? controller;
   WebSocketTaskRepository? repository;
   Uri serverUri = defaultServerWebSocketUri();
@@ -29,6 +33,8 @@ class _TasksTrackerAppState extends State<TasksTrackerApp> {
   void initState() {
     super.initState();
     settingsStore = createClientSettingsStore();
+    taskWindow = createTaskWindow();
+    taskTray = createTaskTray(toggleAppWindow: taskWindow.toggle);
     unawaited(_start());
   }
 
@@ -69,6 +75,7 @@ class _TasksTrackerAppState extends State<TasksTrackerApp> {
       startupError = null;
     });
 
+    taskTray.attach(nextController);
     previousController?.dispose();
     unawaited(previousRepository?.close());
     unawaited(nextController.load());
@@ -108,8 +115,11 @@ class _TasksTrackerAppState extends State<TasksTrackerApp> {
 
   @override
   void dispose() {
+    taskTray.attach(null);
     controller?.dispose();
     unawaited(repository?.close());
+    unawaited(taskTray.dispose());
+    unawaited(taskWindow.dispose());
     super.dispose();
   }
 
