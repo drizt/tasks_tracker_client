@@ -41,6 +41,8 @@ class WebSocketTaskRepository implements TaskRepository {
         await client.sendRequest('tasks.create', _taskCreateParams(task));
       } else if (_becameArchived(oldTask, task)) {
         await client.sendRequest('tasks.archive', {'id': task.id});
+      } else if (_becameUnarchived(oldTask, task)) {
+        await client.sendRequest('tasks.update', _taskUnarchiveParams(task));
       } else if (_taskChanged(oldTask, task)) {
         await client.sendRequest('tasks.update', _taskUpdateParams(task));
       }
@@ -277,6 +279,14 @@ class WebSocketTaskRepository implements TaskRepository {
     };
   }
 
+  Map<String, Object?> _taskUnarchiveParams(Task task) {
+    return {
+      ..._taskUpdateParams(task),
+      'isArchived': false,
+      'archivedAt': null,
+    };
+  }
+
   TimeEntry _timeEntryFromServer(Map<dynamic, dynamic> json) {
     return TimeEntry(
       id: json['id'] as String,
@@ -310,6 +320,10 @@ class WebSocketTaskRepository implements TaskRepository {
 
   bool _becameArchived(Task oldTask, Task task) {
     return !oldTask.isArchived && task.isArchived;
+  }
+
+  bool _becameUnarchived(Task oldTask, Task task) {
+    return oldTask.isArchived && !task.isArchived;
   }
 
   bool _taskChanged(Task oldTask, Task task) {

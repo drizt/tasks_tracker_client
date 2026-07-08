@@ -210,6 +210,7 @@ class TaskController extends ChangeNotifier {
       }
 
       return task.copyWith(
+        status: _unarchiveStatusForTask(taskId),
         isArchived: false,
         clearArchivedAt: true,
         updatedAt: now,
@@ -375,6 +376,11 @@ class TaskController extends ChangeNotifier {
     }
 
     return null;
+  }
+
+  TaskStatus _unarchiveStatusForTask(String taskId) {
+    final hasTimeEntries = _timeEntries.any((entry) => entry.taskId == taskId);
+    return hasTimeEntries ? TaskStatus.active : TaskStatus.newTask;
   }
 
   bool _matchesFilter(Task task) {

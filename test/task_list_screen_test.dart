@@ -100,6 +100,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(controller.tasks.single.isArchived, isFalse);
+    expect(controller.tasks.single.status, TaskStatus.newTask);
     expect(controller.filter, TaskListFilter.work);
 
     controller.dispose();

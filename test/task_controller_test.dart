@@ -146,7 +146,7 @@ void main() {
     controller.dispose();
   });
 
-  test('archives and unarchives tasks without changing their status', () async {
+  test('archives tasks and unarchives them as new tasks', () async {
     final repository = _MemoryTaskRepository(
       TaskStore(
         tasks: [
@@ -173,9 +173,43 @@ void main() {
 
     await controller.unarchiveTask('task-1');
 
-    expect(controller.filter, TaskListFilter.completed);
+    expect(controller.filter, TaskListFilter.work);
     expect(controller.filteredTasks.single.isArchived, isFalse);
-    expect(controller.filteredTasks.single.status, TaskStatus.completed);
+    expect(controller.filteredTasks.single.status, TaskStatus.newTask);
+  });
+
+  test('unarchives tasks with time entries as active tasks', () async {
+    final repository = _MemoryTaskRepository(
+      TaskStore(
+        tasks: [
+          Task(
+            id: 'task-1',
+            title: 'Tracked task',
+            description: '',
+            status: TaskStatus.completed,
+            createdAt: DateTime.utc(2026, 6, 26, 8),
+            updatedAt: DateTime.utc(2026, 6, 26, 8),
+          ),
+        ],
+        timeEntries: [
+          TimeEntry(
+            id: 'entry-1',
+            taskId: 'task-1',
+            startedAt: DateTime.utc(2026, 6, 26, 8),
+            endedAt: DateTime.utc(2026, 6, 26, 8, 30),
+          ),
+        ],
+      ),
+    );
+    final controller = TaskController(repository);
+
+    await controller.load();
+    await controller.archiveTask('task-1');
+    await controller.unarchiveTask('task-1');
+
+    expect(controller.filter, TaskListFilter.work);
+    expect(controller.filteredTasks.single.isArchived, isFalse);
+    expect(controller.filteredTasks.single.status, TaskStatus.active);
   });
 
   test(

@@ -80,6 +80,92 @@ void main() {
     expect(client.requests.last.parameters, {'id': 'task-1'});
   });
 
+  test('unarchives tasks through JSON-RPC update with new status', () async {
+    final client = _FakeTaskRpcClient();
+    final repository = WebSocketTaskRepository(client: client);
+    final store = await repository.load();
+    final archivedAt = DateTime.utc(2026, 6, 30, 1);
+
+    await repository.save(
+      TaskStore(
+        tasks: [
+          store.tasks.single.copyWith(
+            status: TaskStatus.completed,
+            isArchived: true,
+            archivedAt: archivedAt,
+          ),
+        ],
+        timeEntries: store.timeEntries,
+      ),
+    );
+
+    await repository.save(
+      TaskStore(
+        tasks: [
+          store.tasks.single.copyWith(
+            status: TaskStatus.newTask,
+            isArchived: false,
+            clearArchivedAt: true,
+          ),
+        ],
+        timeEntries: store.timeEntries,
+      ),
+    );
+
+    expect(client.requests.last.method, 'tasks.update');
+    expect(client.requests.last.parameters, {
+      'id': 'task-1',
+      'title': 'Loaded task',
+      'description': '',
+      'statusId': 1,
+      'isArchived': false,
+      'archivedAt': null,
+    });
+  });
+
+  test('unarchives active tasks through JSON-RPC update', () async {
+    final client = _FakeTaskRpcClient();
+    final repository = WebSocketTaskRepository(client: client);
+    final store = await repository.load();
+    final archivedAt = DateTime.utc(2026, 6, 30, 1);
+
+    await repository.save(
+      TaskStore(
+        tasks: [
+          store.tasks.single.copyWith(
+            status: TaskStatus.completed,
+            isArchived: true,
+            archivedAt: archivedAt,
+          ),
+        ],
+        timeEntries: store.timeEntries,
+      ),
+    );
+
+    await repository.save(
+      TaskStore(
+        tasks: [
+          store.tasks.single.copyWith(
+            status: TaskStatus.active,
+            isArchived: false,
+            clearArchivedAt: true,
+          ),
+        ],
+        timeEntries: store.timeEntries,
+      ),
+    );
+
+    expect(client.requests.last.method, 'tasks.update');
+    expect(client.requests.last.parameters, {
+      'id': 'task-1',
+      'title': 'Loaded task',
+      'description': '',
+      'statusId': 2,
+      'isArchived': false,
+      'archivedAt': null,
+    });
+  });
+
   test('deletes removed tasks through JSON-RPC', () async {
     final client = _FakeTaskRpcClient();
     final repository = WebSocketTaskRepository(client: client);
