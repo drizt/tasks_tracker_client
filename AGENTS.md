@@ -35,6 +35,6 @@ This emulates the Codium/VS Code setup:
 - Client-side data structures must mirror the database structure defined by the
   server SQL migrations in `../tasks-tracker-server/prisma/migrations/*.sql`.
 - Mirror the server ID conventions: enum-like lookup rows use integer IDs, and
-  app-created records use `VARCHAR(191)` IDs containing LUUID values.
+  app-created records use `VARCHAR(191)` IDs containing ULID values.
 - Coordinate server-facing behavior through the JSON API and WebSocket
   contracts, not shared runtime code.
