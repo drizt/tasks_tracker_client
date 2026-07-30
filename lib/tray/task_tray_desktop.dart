@@ -175,21 +175,9 @@ class TaskTray {
     return Platform.isLinux || Platform.isMacOS || Platform.isWindows;
   }
 
-  String get _iconPath {
-    if (Platform.isWindows) {
-      return 'windows/runner/resources/app_icon.ico';
-    }
+  String get _iconPath => 'assets/app_icon.png';
 
-    return 'assets/app_icon.png';
-  }
-
-  String get _activeIconPath {
-    if (Platform.isWindows) {
-      return 'windows/runner/resources/app_icon_active.ico';
-    }
-
-    return 'assets/app_icon_active.png';
-  }
+  String get _activeIconPath => 'assets/app_icon_active.png';
 
   void attach(TaskController? controller) {
     if (identical(_controller, controller)) {
