@@ -11,13 +11,30 @@ ClientSettingsStore createClientSettingsStore() {
 }
 
 File defaultClientSettingsFile() {
-  final configHome = Platform.environment['XDG_CONFIG_HOME'];
-  final home = Platform.environment['HOME'];
+  final environment = Platform.environment;
+  final currentDirectory = Directory.current.path;
+
+  if (Platform.isWindows) {
+    final appData = environment['APPDATA'];
+    if (appData != null && appData.isNotEmpty) {
+      return File('$appData/tasks-tracker-client/settings.json');
+    }
+
+    final userProfile = environment['USERPROFILE'];
+    final configRoot = userProfile != null && userProfile.isNotEmpty
+        ? '$userProfile/AppData/Roaming'
+        : currentDirectory;
+
+    return File('$configRoot/tasks-tracker-client/settings.json');
+  }
+
+  final configHome = environment['XDG_CONFIG_HOME'];
+  final home = environment['HOME'];
   final configRoot = configHome != null && configHome.isNotEmpty
       ? configHome
       : home != null && home.isNotEmpty
       ? '$home/.config'
-      : Directory.current.path;
+      : currentDirectory;
 
   return File('$configRoot/tasks-tracker-client/settings.json');
 }
