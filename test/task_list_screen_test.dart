@@ -134,6 +134,16 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('shows nothing when selected task has no description', (
+    tester,
+  ) async {
+    final controller = await _pumpApp(tester, _storeWithTask(description: ''));
+
+    expect(find.text('No description'), findsNothing);
+
+    controller.dispose();
+  });
+
   testWidgets('opens server settings from the sidebar', (tester) async {
     var openCount = 0;
     final controller = await _pumpApp(
@@ -311,6 +321,7 @@ Future<TaskController> _pumpApp(
 
 TaskStore _storeWithTask({
   TaskStatus status = TaskStatus.active,
+  String description = 'Task under test',
   List<TimeEntry> entries = const [],
 }) {
   return TaskStore(
@@ -318,7 +329,7 @@ TaskStore _storeWithTask({
       Task(
         id: 'task-1',
         title: 'Tracked task',
-        description: 'Task under test',
+        description: description,
         status: status,
         createdAt: DateTime.utc(2026, 6, 26, 8),
         updatedAt: DateTime.utc(2026, 6, 26, 8),
