@@ -54,7 +54,44 @@ class TaskController extends ChangeNotifier {
   TaskListFilter get filter => _filter;
 
   List<Task> get filteredTasks {
-    return _tasks.where(_matchesFilter).toList();
+    final visibleTasks = _tasks.where(_matchesFilter).toList();
+    final originalIndexes = {
+      for (var index = 0; index < visibleTasks.length; index++)
+        visibleTasks[index].id: index,
+    };
+    final latestEndedAtByTaskId = <String, DateTime>{};
+
+    for (final entry in _timeEntries) {
+      final endedAt = entry.endedAt;
+      if (endedAt == null) {
+        continue;
+      }
+
+      final latestEndedAt = latestEndedAtByTaskId[entry.taskId];
+      if (latestEndedAt == null || endedAt.isAfter(latestEndedAt)) {
+        latestEndedAtByTaskId[entry.taskId] = endedAt;
+      }
+    }
+
+    visibleTasks.sort((first, second) {
+      final firstIsRunning = first.id == _activeTaskId;
+      final secondIsRunning = second.id == _activeTaskId;
+      if (firstIsRunning != secondIsRunning) {
+        return firstIsRunning ? -1 : 1;
+      }
+
+      final firstSortTime = latestEndedAtByTaskId[first.id] ?? first.updatedAt;
+      final secondSortTime =
+          latestEndedAtByTaskId[second.id] ?? second.updatedAt;
+      final sortTimeComparison = secondSortTime.compareTo(firstSortTime);
+      if (sortTimeComparison != 0) {
+        return sortTimeComparison;
+      }
+
+      return originalIndexes[first.id]!.compareTo(originalIndexes[second.id]!);
+    });
+
+    return visibleTasks;
   }
 
   Task? get selectedTask {
