@@ -38,6 +38,40 @@ void main() {
     expect(controller.totalForTask('task-1'), const Duration(minutes: 45));
   });
 
+  test('orders time entries by start time descending', () async {
+    final repository = _MemoryTaskRepository(
+      TaskStore(
+        tasks: const [],
+        timeEntries: [
+          TimeEntry(
+            id: 'middle-entry',
+            taskId: 'task-1',
+            startedAt: DateTime.utc(2026, 6, 26, 10),
+          ),
+          TimeEntry(
+            id: 'newest-entry',
+            taskId: 'task-1',
+            startedAt: DateTime.utc(2026, 6, 26, 11),
+          ),
+          TimeEntry(
+            id: 'oldest-entry',
+            taskId: 'task-1',
+            startedAt: DateTime.utc(2026, 6, 26, 9),
+          ),
+        ],
+      ),
+    );
+    final controller = TaskController(repository);
+
+    await controller.load();
+
+    expect(controller.entriesForTask('task-1').map((entry) => entry.id), [
+      'newest-entry',
+      'middle-entry',
+      'oldest-entry',
+    ]);
+  });
+
   test('adds a task and saves it through the repository', () async {
     final repository = _MemoryTaskRepository(
       const TaskStore(tasks: [], timeEntries: []),
