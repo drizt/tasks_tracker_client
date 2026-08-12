@@ -30,6 +30,21 @@ This emulates the Codium/VS Code setup:
 - Save-time fix-all is configured through `editor.codeActionsOnSave`, so mimic
   it by applying appropriate Dart fixes when changing linted code.
 
+## Commit Messages
+
+- Use Conventional Commits for commit messages, following the
+  `<type>[optional scope]: <description>` format.
+- Use `!` before the colon or a `BREAKING CHANGE:` footer for breaking changes.
+- Keep each commit atomic and focused on a single logical change.
+- Commit a new feature and its tests separately.
+
+## Repository Safety
+
+- Do not alter Git state, including the index, commits, history, branches, tags,
+  or other refs, without an explicit request.
+- Do not modify third-party libraries or vendored dependencies without an
+  explicit request.
+
 ## Database Structure
 
 - Client-side data structures must mirror the database structure defined by the
