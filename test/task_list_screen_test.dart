@@ -6,6 +6,7 @@ import 'package:tasks_tracker_client/models/task.dart';
 import 'package:tasks_tracker_client/models/time_entry.dart';
 import 'package:tasks_tracker_client/screens/task_list_screen.dart';
 import 'package:tasks_tracker_client/state/task_controller.dart';
+import 'package:tasks_tracker_client/utils/duration_format.dart';
 
 void main() {
   testWidgets('adds a task from the sidebar', (tester) async {
@@ -202,6 +203,8 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(controller.entriesForTask('task-1'), hasLength(1));
+    await tester.tap(find.text(formatDate(DateTime(2026, 6, 27))));
+    await tester.pumpAndSettle();
     expect(find.text('Review'), findsOneWidget);
 
     controller.dispose();
@@ -225,6 +228,8 @@ void main() {
       ),
     );
 
+    await tester.tap(find.text(formatDate(DateTime(2026, 6, 27))));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Edit time entry'));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -250,6 +255,57 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(controller.entriesForTask('task-1'), isEmpty);
     expect(find.text('No saved time entries'), findsOneWidget);
+
+    controller.dispose();
+  });
+
+  testWidgets('groups entries by start date with daily totals', (tester) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final controller = await _pumpApp(
+      tester,
+      _storeWithTask(
+        entries: [
+          TimeEntry(
+            id: 'today-entry',
+            taskId: 'task-1',
+            startedAt: today.add(const Duration(hours: 9)),
+            endedAt: today.add(const Duration(hours: 10)),
+            note: 'Today note',
+          ),
+          TimeEntry(
+            id: 'cross-midnight-entry',
+            taskId: 'task-1',
+            startedAt: yesterday.add(const Duration(hours: 23)),
+            endedAt: today.add(const Duration(hours: 1)),
+            note: 'Cross-midnight note',
+          ),
+          TimeEntry(
+            id: 'yesterday-entry',
+            taskId: 'task-1',
+            startedAt: yesterday.add(const Duration(hours: 12)),
+            endedAt: yesterday.add(const Duration(hours: 12, minutes: 30)),
+            note: 'Yesterday note',
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('Yesterday'), findsOneWidget);
+    expect(find.text('1:00:00'), findsNWidgets(2));
+    expect(find.text('2:30:00'), findsOneWidget);
+    expect(find.text('Today note'), findsOneWidget);
+    expect(find.text('Cross-midnight note'), findsNothing);
+    expect(find.text('Yesterday note'), findsNothing);
+    expect(find.byIcon(Icons.schedule_rounded), findsNothing);
+
+    await tester.tap(find.text('Yesterday'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cross-midnight note'), findsOneWidget);
+    expect(find.text('Yesterday note'), findsOneWidget);
 
     controller.dispose();
   });
