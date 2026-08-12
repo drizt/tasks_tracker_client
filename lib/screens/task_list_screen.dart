@@ -271,13 +271,13 @@ class _TaskDetails extends StatelessWidget {
                       task.title,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 8),
-                    SelectableText(
-                      task.description.isEmpty
-                          ? 'No description'
-                          : task.description,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
+                    if (task.description.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      SelectableText(
+                        task.description,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
                   ],
                 ),
               ),
