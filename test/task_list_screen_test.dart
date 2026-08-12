@@ -120,6 +120,20 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('makes selected task title and description selectable', (
+    tester,
+  ) async {
+    final controller = await _pumpApp(tester, _storeWithTask());
+
+    expect(find.widgetWithText(SelectableText, 'Tracked task'), findsOneWidget);
+    expect(
+      find.widgetWithText(SelectableText, 'Task under test'),
+      findsOneWidget,
+    );
+
+    controller.dispose();
+  });
+
   testWidgets('opens server settings from the sidebar', (tester) async {
     var openCount = 0;
     final controller = await _pumpApp(
