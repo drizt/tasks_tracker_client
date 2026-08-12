@@ -1,3 +1,5 @@
+import 'package:smart_date_formatter/smart_date_formatter.dart';
+
 String formatDuration(Duration duration) {
   final totalSeconds = duration.inSeconds;
   final hours = totalSeconds ~/ 3600;
@@ -20,4 +22,13 @@ String formatDateTime(DateTime dateTime) {
   return '${local.year}-${twoDigits(local.month)}-${twoDigits(local.day)} '
       '${twoDigits(local.hour)}:${twoDigits(local.minute)}:'
       '${twoDigits(local.second)}';
+}
+
+String formatDate(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  return local.isToday || local.isYesterday
+      ? local.calendar
+      : local.isSameYear(DateTime.now())
+      ? local.format('EEE, d MMM')
+      : local.format('EEE, d MMM yyyy');
 }

@@ -421,29 +421,117 @@ class _TaskDetails extends StatelessWidget {
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                   )
-                : ListView.separated(
-                    itemCount: entries.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final entry = entries[index];
-                      return _TimeEntryRow(
-                        entry: entry,
-                        onEdit: () => _showTimeEntryDialog(
-                          context,
-                          controller,
-                          taskId: task.id,
-                          existingEntry: entry,
-                        ),
-                        onDelete: () =>
-                            _confirmDeleteTimeEntry(context, controller, entry),
-                      );
-                    },
+                : _TimeEntryGroups(
+                    taskId: task.id,
+                    entries: entries,
+                    onEdit: (entry) => _showTimeEntryDialog(
+                      context,
+                      controller,
+                      taskId: task.id,
+                      existingEntry: entry,
+                    ),
+                    onDelete: (entry) =>
+                        _confirmDeleteTimeEntry(context, controller, entry),
                   ),
           ),
         ],
       ),
     );
   }
+}
+
+class _TimeEntryGroups extends StatelessWidget {
+  const _TimeEntryGroups({
+    required this.taskId,
+    required this.entries,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final String taskId;
+  final List<TimeEntry> entries;
+  final ValueChanged<TimeEntry> onEdit;
+  final ValueChanged<TimeEntry> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _groupTimeEntries(entries);
+    final today = DateTime.now();
+
+    return ListView.builder(
+      itemCount: groups.length,
+      itemBuilder: (context, index) {
+        final group = groups[index];
+        return ExpansionTile(
+          key: PageStorageKey('$taskId:${group.date.toIso8601String()}'),
+          initiallyExpanded: _isSameDate(group.date, today),
+          shape: const Border(),
+          collapsedShape: const Border(),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  formatDate(group.date),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Text(
+                formatDuration(group.total),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          children: group.entries.map((entry) {
+            return _TimeEntryRow(
+              entry: entry,
+              onEdit: () => onEdit(entry),
+              onDelete: () => onDelete(entry),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _TimeEntryGroup {
+  const _TimeEntryGroup({
+    required this.date,
+    required this.entries,
+    required this.total,
+  });
+
+  final DateTime date;
+  final List<TimeEntry> entries;
+  final Duration total;
+}
+
+List<_TimeEntryGroup> _groupTimeEntries(List<TimeEntry> entries) {
+  final entriesByDate = <DateTime, List<TimeEntry>>{};
+  for (final entry in entries) {
+    final localStart = entry.startedAt.toLocal();
+    final date = DateTime(localStart.year, localStart.month, localStart.day);
+    entriesByDate.putIfAbsent(date, () => []).add(entry);
+  }
+
+  return entriesByDate.entries.map((dateEntries) {
+    final total = dateEntries.value.fold(
+      Duration.zero,
+      (sum, entry) => sum + entry.duration,
+    );
+    return _TimeEntryGroup(
+      date: dateEntries.key,
+      entries: dateEntries.value,
+      total: total,
+    );
+  }).toList();
+}
+
+bool _isSameDate(DateTime first, DateTime second) {
+  final localSecond = second.toLocal();
+  return first.year == localSecond.year &&
+      first.month == localSecond.month &&
+      first.day == localSecond.day;
 }
 
 class _TimeEntryRow extends StatelessWidget {
@@ -464,11 +552,6 @@ class _TimeEntryRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Icon(Icons.schedule_rounded),
-          ),
-          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
