@@ -394,11 +394,11 @@ class TaskController extends ChangeNotifier {
   }
 
   List<TimeEntry> entriesForTask(String taskId) {
-    return _timeEntries
+    final entries = _timeEntries
         .where((entry) => entry.taskId == taskId)
-        .toList()
-        .reversed
         .toList();
+    entries.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    return entries;
   }
 
   Future<void> _save() async {
