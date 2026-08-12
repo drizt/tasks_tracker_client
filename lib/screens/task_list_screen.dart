@@ -267,12 +267,12 @@ class _TaskDetails extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    SelectableText(
                       task.title,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 8),
-                    Text(
+                    SelectableText(
                       task.description.isEmpty
                           ? 'No description'
                           : task.description,
