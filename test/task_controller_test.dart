@@ -146,6 +146,75 @@ void main() {
     controller.dispose();
   });
 
+  test(
+    'orders visible tasks by latest finished entry with running task first',
+    () async {
+      final repository = _MemoryTaskRepository(
+        TaskStore(
+          tasks: [
+            _task('without-entry', updatedAt: DateTime.utc(2026, 6, 26, 10)),
+            _task('older-entry'),
+            _task('running'),
+            _task('newer-entry'),
+          ],
+          timeEntries: [
+            _finishedEntry('older-entry', DateTime.utc(2026, 6, 26, 9)),
+            TimeEntry(
+              id: 'entry-running',
+              taskId: 'running',
+              startedAt: DateTime.now().toUtc().subtract(
+                const Duration(minutes: 10),
+              ),
+            ),
+            _finishedEntry('newer-entry', DateTime.utc(2026, 6, 26, 11)),
+          ],
+        ),
+      );
+      final controller = TaskController(repository);
+
+      await controller.load();
+
+      expect(controller.filteredTasks.map((task) => task.id), [
+        'running',
+        'newer-entry',
+        'without-entry',
+        'older-entry',
+      ]);
+
+      controller.dispose();
+    },
+  );
+
+  test('orders completed tasks by latest finished entry descending', () async {
+    final repository = _MemoryTaskRepository(
+      TaskStore(
+        tasks: [
+          _task('older-entry', status: TaskStatus.completed),
+          _task(
+            'without-entry',
+            status: TaskStatus.completed,
+            updatedAt: DateTime.utc(2026, 6, 26, 10),
+          ),
+          _task('newer-entry', status: TaskStatus.completed),
+        ],
+        timeEntries: [
+          _finishedEntry('older-entry', DateTime.utc(2026, 6, 26, 9)),
+          _finishedEntry('newer-entry', DateTime.utc(2026, 6, 26, 11)),
+        ],
+      ),
+    );
+    final controller = TaskController(repository);
+
+    await controller.load();
+    controller.setFilter(TaskListFilter.completed);
+
+    expect(controller.filteredTasks.map((task) => task.id), [
+      'newer-entry',
+      'without-entry',
+      'older-entry',
+    ]);
+  });
+
   test('archives tasks and unarchives them as new tasks', () async {
     final repository = _MemoryTaskRepository(
       TaskStore(
@@ -289,6 +358,30 @@ void main() {
     expect(controller.entriesForTask('task-1'), isEmpty);
     expect(controller.totalForTask('task-1'), Duration.zero);
   });
+}
+
+Task _task(
+  String id, {
+  TaskStatus status = TaskStatus.active,
+  DateTime? updatedAt,
+}) {
+  return Task(
+    id: id,
+    title: id,
+    description: '',
+    status: status,
+    createdAt: DateTime.utc(2026, 6, 26, 8),
+    updatedAt: updatedAt ?? DateTime.utc(2026, 6, 26, 8),
+  );
+}
+
+TimeEntry _finishedEntry(String taskId, DateTime endedAt) {
+  return TimeEntry(
+    id: 'entry-$taskId',
+    taskId: taskId,
+    startedAt: endedAt.subtract(const Duration(hours: 1)),
+    endedAt: endedAt,
+  );
 }
 
 class _MemoryTaskRepository implements TaskRepository {
