@@ -308,6 +308,68 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('Shift adds a task range to the Ctrl selection', (tester) async {
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'First task'),
+          _taskForWidgetTest('task-2', 'Second task'),
+          _taskForWidgetTest('task-3', 'Third task'),
+          _taskForWidgetTest('task-4', 'Fourth task'),
+        ],
+        timeEntries: const [],
+      ),
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(find.text('Fourth task'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Second task'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedTaskIds, [
+      'task-1',
+      'task-4',
+      'task-2',
+      'task-3',
+    ]);
+    expect(find.text('4 tasks selected'), findsOneWidget);
+
+    controller.dispose();
+  });
+
+  testWidgets('Ctrl+A selects all visible tasks', (tester) async {
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'First task'),
+          _taskForWidgetTest('task-2', 'Second task'),
+          _taskForWidgetTest(
+            'completed',
+            'Completed task',
+            status: TaskStatus.completed,
+          ),
+        ],
+        timeEntries: const [],
+      ),
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedTaskIds, ['task-1', 'task-2']);
+    expect(find.text('2 tasks selected'), findsOneWidget);
+
+    controller.dispose();
+  });
+
   testWidgets('opens server settings from the sidebar', (tester) async {
     var openCount = 0;
     final controller = await _pumpApp(
@@ -558,12 +620,16 @@ TaskStore _storeWithTask({
   );
 }
 
-Task _taskForWidgetTest(String id, String title) {
+Task _taskForWidgetTest(
+  String id,
+  String title, {
+  TaskStatus status = TaskStatus.active,
+}) {
   return Task(
     id: id,
     title: title,
     description: '',
-    status: TaskStatus.active,
+    status: status,
     createdAt: DateTime.utc(2026, 6, 26, 8),
     updatedAt: DateTime.utc(2026, 6, 26, 8),
   );

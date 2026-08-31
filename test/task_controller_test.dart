@@ -117,6 +117,35 @@ void main() {
     expect(controller.selectedTaskIds, ['task-3']);
   });
 
+  test('selects a task range and all visible tasks', () async {
+    final repository = _MemoryTaskRepository(
+      TaskStore(
+        tasks: [
+          _task('task-1'),
+          _task('task-2'),
+          _task('task-3'),
+          _task('completed', status: TaskStatus.completed),
+        ],
+        timeEntries: const [],
+      ),
+    );
+    final controller = TaskController(repository);
+
+    await controller.load();
+    controller.selectTask('task-3', range: true);
+
+    expect(controller.selectedTaskIds, ['task-1', 'task-2', 'task-3']);
+
+    controller.selectTask('task-1');
+    controller.selectTask('task-3', additive: true);
+    controller.selectTask('task-2', range: true);
+    expect(controller.selectedTaskIds, ['task-1', 'task-3', 'task-2']);
+
+    controller.selectAllVisibleTasks();
+    expect(controller.selectedTaskIds, ['task-1', 'task-2', 'task-3']);
+    expect(controller.selectedTaskIds, isNot(contains('completed')));
+  });
+
   test('selects adjacent tasks in visible order', () async {
     final repository = _MemoryTaskRepository(
       TaskStore(
