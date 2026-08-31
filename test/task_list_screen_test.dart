@@ -8,6 +8,7 @@ import 'package:tasks_tracker_client/models/time_entry.dart';
 import 'package:tasks_tracker_client/screens/task_list_screen.dart';
 import 'package:tasks_tracker_client/state/task_controller.dart';
 import 'package:tasks_tracker_client/utils/duration_format.dart';
+import 'package:tasks_tracker_client/widgets/task_card.dart';
 
 void main() {
   testWidgets('adds a task from the sidebar', (tester) async {
@@ -210,6 +211,67 @@ void main() {
       controller.tasks.map((task) => task.isArchived),
       everyElement(isFalse),
     );
+
+    controller.dispose();
+  });
+
+  testWidgets('Up and Down select adjacent tasks', (tester) async {
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'First task'),
+          _taskForWidgetTest('task-2', 'Second task'),
+        ],
+        timeEntries: const [],
+      ),
+    );
+
+    expect(controller.selectedTaskId, 'task-1');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(controller.selectedTaskId, 'task-2');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(controller.selectedTaskId, 'task-1');
+
+    controller.dispose();
+  });
+
+  testWidgets('scrolls to task selected with Up and Down', (tester) async {
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          for (var index = 1; index <= 30; index++)
+            _taskForWidgetTest('task-$index', 'Task $index'),
+        ],
+        timeEntries: const [],
+      ),
+    );
+
+    for (var index = 1; index < 30; index++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    }
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedTaskId, 'task-30');
+    final selectedTask = find.widgetWithText(TaskCard, 'Task 30');
+    expect(selectedTask, findsOneWidget);
+    expect(
+      tester.getBottomRight(selectedTask).dy,
+      lessThanOrEqualTo(tester.getBottomRight(find.byType(ListView).first).dy),
+    );
+
+    for (var index = 1; index < 30; index++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    }
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedTaskId, 'task-1');
+    expect(find.widgetWithText(TaskCard, 'Task 1'), findsOneWidget);
 
     controller.dispose();
   });
