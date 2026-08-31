@@ -130,7 +130,14 @@ class _BodyState extends State<_Body> {
                 });
               },
             ),
-            Expanded(child: _TaskDetails(controller: controller)),
+            Expanded(
+              child: _TaskDetails(
+                key: ValueKey(
+                  controller.selectedTasks.map((task) => task.id).join(','),
+                ),
+                controller: controller,
+              ),
+            ),
           ],
         );
       },
@@ -313,13 +320,21 @@ class _TaskSidebarState extends State<_TaskSidebar> {
   }
 }
 
-class _TaskDetails extends StatelessWidget {
-  const _TaskDetails({required this.controller});
+class _TaskDetails extends StatefulWidget {
+  const _TaskDetails({required this.controller, super.key});
 
   final TaskController controller;
 
   @override
+  State<_TaskDetails> createState() => _TaskDetailsState();
+}
+
+class _TaskDetailsState extends State<_TaskDetails> {
+  bool _isDescriptionExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
     final tasks = controller.selectedTasks;
     if (tasks.isEmpty) {
       return const Center(child: Text('Select a task'));
@@ -352,21 +367,73 @@ class _TaskDetails extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SelectableText(
-                        task.title,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      if (task.description.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        SelectableText(
-                          task.description,
-                          style: Theme.of(context).textTheme.bodyLarge,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final descriptionStyle = Theme.of(
+                        context,
+                      ).textTheme.bodyLarge;
+                      final descriptionPainter = TextPainter(
+                        text: TextSpan(
+                          text: task.description,
+                          style: descriptionStyle,
                         ),
-                      ],
-                    ],
+                        maxLines: 3,
+                        textDirection: Directionality.of(context),
+                        textScaler: MediaQuery.textScalerOf(context),
+                      )..layout(maxWidth: constraints.maxWidth);
+                      final canExpand = descriptionPainter.didExceedMaxLines;
+                      descriptionPainter.dispose();
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (canExpand)
+                            IconButton(
+                              tooltip: _isDescriptionExpanded
+                                  ? 'Collapse description'
+                                  : 'Expand description',
+                              onPressed: () => setState(() {
+                                _isDescriptionExpanded =
+                                    !_isDescriptionExpanded;
+                              }),
+                              icon: Icon(
+                                _isDescriptionExpanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                              ),
+                            ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SelectableText(
+                                  task.title,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineMedium,
+                                ),
+                                if (task.description.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  SelectionArea(
+                                    key: const ValueKey('task-description'),
+                                    child: Text(
+                                      task.description,
+                                      maxLines: _isDescriptionExpanded
+                                          ? null
+                                          : 3,
+                                      overflow: _isDescriptionExpanded
+                                          ? null
+                                          : TextOverflow.clip,
+                                      style: descriptionStyle,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 20),
