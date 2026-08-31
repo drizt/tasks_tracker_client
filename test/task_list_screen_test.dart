@@ -130,9 +130,45 @@ void main() {
 
     expect(find.widgetWithText(SelectableText, 'Tracked task'), findsOneWidget);
     expect(
-      find.widgetWithText(SelectableText, 'Task under test'),
+      find.descendant(
+        of: find.byKey(const ValueKey('task-description')),
+        matching: find.text('Task under test'),
+      ),
       findsOneWidget,
     );
+    expect(find.byTooltip('Expand description'), findsNothing);
+
+    controller.dispose();
+  });
+
+  testWidgets('collapses and expands the selected task description', (
+    tester,
+  ) async {
+    final controller = await _pumpApp(
+      tester,
+      _storeWithTask(
+        description: 'First line\nSecond line\nThird line\nFourth line',
+      ),
+    );
+    final descriptionArea = find.byKey(const ValueKey('task-description'));
+    Text description() => tester.widget(
+      find.descendant(of: descriptionArea, matching: find.byType(Text)),
+    );
+
+    expect(description().maxLines, 3);
+    expect(description().overflow, TextOverflow.clip);
+    expect(
+      find.descendant(of: descriptionArea, matching: find.byType(Scrollable)),
+      findsNothing,
+    );
+    expect(find.byTooltip('Expand description'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Expand description'));
+    await tester.pump();
+
+    expect(description().maxLines, isNull);
+    expect(description().overflow, isNull);
+    expect(find.byTooltip('Collapse description'), findsOneWidget);
 
     controller.dispose();
   });
