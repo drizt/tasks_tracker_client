@@ -945,9 +945,18 @@ class _TaskDialog extends StatefulWidget {
 }
 
 class _TaskDialogState extends State<_TaskDialog> {
+  static const _initialSize = Size(520, 360);
+  static const _minimumSize = Size(420, 300);
+  static const _dialogMargin = 24.0;
+
   final formKey = GlobalKey<FormState>();
   late final TextEditingController titleController;
   late final TextEditingController descriptionController;
+  Size dialogSize = _initialSize;
+  Offset? dialogTopLeft;
+  Size? restoredDialogSize;
+  Offset? restoredDialogTopLeft;
+  bool isMaximized = false;
 
   @override
   void initState() {
@@ -969,58 +978,245 @@ class _TaskDialogState extends State<_TaskDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.existingTask == null ? 'Add task' : 'Edit task'),
-      content: SizedBox(
-        width: 460,
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: titleController,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: 'Title'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Title is required';
-                  }
-                  return null;
-                },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableSize = Size(
+          constraints.maxWidth - (_dialogMargin * 2),
+          constraints.maxHeight - (_dialogMargin * 2),
+        );
+        final effectiveSize = _clampSize(dialogSize, availableSize);
+        final effectiveTopLeft = _clampPosition(
+          dialogTopLeft ??
+              Offset(
+                (constraints.maxWidth - effectiveSize.width) / 2,
+                (constraints.maxHeight - effectiveSize.height) / 2,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: descriptionController,
-                minLines: 3,
-                maxLines: 5,
-                decoration: const InputDecoration(labelText: 'Description'),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (!(formKey.currentState?.validate() ?? false)) {
-              return;
-            }
+          effectiveSize,
+          constraints.biggest,
+        );
 
-            Navigator.of(context).pop(
-              _TaskFormResult(
-                title: titleController.text.trim(),
-                description: descriptionController.text.trim(),
+        return Stack(
+          children: [
+            Positioned(
+              left: effectiveTopLeft.dx,
+              top: effectiveTopLeft.dy,
+              width: effectiveSize.width,
+              height: effectiveSize.height,
+              child: Dialog(
+                insetPadding: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        MouseRegion(
+                          cursor: SystemMouseCursors.move,
+                          child: GestureDetector(
+                            key: const ValueKey('task-dialog-title-bar'),
+                            behavior: HitTestBehavior.opaque,
+                            onDoubleTap: () {
+                              _toggleMaximized(
+                                effectiveSize,
+                                effectiveTopLeft,
+                                availableSize,
+                              );
+                            },
+                            onPanStart: (_) {
+                              dialogTopLeft = effectiveTopLeft;
+                            },
+                            onPanUpdate: (details) {
+                              setState(() {
+                                dialogTopLeft = _clampPosition(
+                                  dialogTopLeft! + details.delta,
+                                  effectiveSize,
+                                  constraints.biggest,
+                                );
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                20,
+                                24,
+                                12,
+                              ),
+                              child: Text(
+                                widget.existingTask == null
+                                    ? 'Add task'
+                                    : 'Edit task',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineSmall,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                            child: Form(
+                              key: formKey,
+                              child: Column(
+                                children: [
+                                  TextFormField(
+                                    controller: titleController,
+                                    autofocus: true,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Title',
+                                    ),
+                                    validator: (value) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
+                                        return 'Title is required';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: descriptionController,
+                                      expands: true,
+                                      minLines: null,
+                                      maxLines: null,
+                                      textAlignVertical: TextAlignVertical.top,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Description',
+                                        alignLabelWithHint: true,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Cancel'),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton(
+                                onPressed: _save,
+                                child: const Text('Save'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.resizeDownRight,
+                        child: GestureDetector(
+                          key: const ValueKey('task-dialog-resize-handle'),
+                          behavior: HitTestBehavior.opaque,
+                          onPanStart: (_) {
+                            dialogTopLeft = effectiveTopLeft;
+                            dialogSize = effectiveSize;
+                            isMaximized = false;
+                          },
+                          onPanUpdate: (details) {
+                            setState(() {
+                              dialogSize = _clampSize(
+                                Size(
+                                  dialogSize.width + details.delta.dx,
+                                  dialogSize.height + details.delta.dy,
+                                ),
+                                availableSize,
+                              );
+                            });
+                          },
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Icon(
+                              Icons.drag_handle_rounded,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
-          child: const Text('Save'),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Size _clampSize(Size size, Size availableSize) {
+    return Size(
+      size.width
+          .clamp(
+            _minimumSize.width.clamp(0, availableSize.width),
+            availableSize.width,
+          )
+          .toDouble(),
+      size.height
+          .clamp(
+            _minimumSize.height.clamp(0, availableSize.height),
+            availableSize.height,
+          )
+          .toDouble(),
+    );
+  }
+
+  Offset _clampPosition(Offset position, Size size, Size viewportSize) {
+    return Offset(
+      position.dx
+          .clamp(_dialogMargin, viewportSize.width - size.width - _dialogMargin)
+          .toDouble(),
+      position.dy
+          .clamp(
+            _dialogMargin,
+            viewportSize.height - size.height - _dialogMargin,
+          )
+          .toDouble(),
+    );
+  }
+
+  void _toggleMaximized(
+    Size effectiveSize,
+    Offset effectiveTopLeft,
+    Size availableSize,
+  ) {
+    setState(() {
+      if (isMaximized) {
+        dialogSize = restoredDialogSize ?? _initialSize;
+        dialogTopLeft = restoredDialogTopLeft;
+      } else {
+        restoredDialogSize = effectiveSize;
+        restoredDialogTopLeft = effectiveTopLeft;
+        dialogSize = availableSize;
+        dialogTopLeft = const Offset(_dialogMargin, _dialogMargin);
+      }
+      isMaximized = !isMaximized;
+    });
+  }
+
+  void _save() {
+    if (!(formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _TaskFormResult(
+        title: titleController.text.trim(),
+        description: descriptionController.text.trim(),
+      ),
     );
   }
 }
