@@ -161,6 +161,14 @@ class TaskController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void selectPreviousTask() {
+    _selectAdjacentTask(-1);
+  }
+
+  void selectNextTask() {
+    _selectAdjacentTask(1);
+  }
+
   void setFilter(TaskListFilter filter) {
     _filter = filter;
     _retainVisibleSelection();
@@ -492,6 +500,29 @@ class TaskController extends ChangeNotifier {
     if (visibleTasks.isNotEmpty) {
       _selectedTaskIds.add(visibleTasks.first.id);
     }
+  }
+
+  void _selectAdjacentTask(int offset) {
+    final visibleTasks = filteredTasks;
+    if (visibleTasks.isEmpty) {
+      return;
+    }
+
+    final selectedIndex = visibleTasks.indexWhere(
+      (task) => task.id == selectedTaskId,
+    );
+    final nextIndex = (selectedIndex + offset)
+        .clamp(0, visibleTasks.length - 1)
+        .toInt();
+    final nextTaskId = visibleTasks[nextIndex].id;
+    if (_selectedTaskIds.length == 1 && selectedTaskId == nextTaskId) {
+      return;
+    }
+
+    _selectedTaskIds
+      ..clear()
+      ..add(nextTaskId);
+    notifyListeners();
   }
 
   void _retainVisibleSelection() {

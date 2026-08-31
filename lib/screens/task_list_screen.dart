@@ -26,19 +26,30 @@ class TaskListScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        return Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: _Body(
-                    controller: controller,
-                    serverUri: serverUri,
-                    onConfigureServer: onConfigureServer,
-                  ),
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.arrowUp):
+                controller.selectPreviousTask,
+            const SingleActivator(LogicalKeyboardKey.arrowDown):
+                controller.selectNextTask,
+          },
+          child: Focus(
+            autofocus: true,
+            child: Scaffold(
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: _Body(
+                        controller: controller,
+                        serverUri: serverUri,
+                        onConfigureServer: onConfigureServer,
+                      ),
+                    ),
+                    ActiveTimerBar(controller: controller),
+                  ],
                 ),
-                ActiveTimerBar(controller: controller),
-              ],
+              ),
             ),
           ),
         );
@@ -154,7 +165,7 @@ class _ResizeHandle extends StatelessWidget {
   }
 }
 
-class _TaskSidebar extends StatelessWidget {
+class _TaskSidebar extends StatefulWidget {
   const _TaskSidebar({
     required this.controller,
     required this.serverUri,
@@ -166,8 +177,32 @@ class _TaskSidebar extends StatelessWidget {
   final Future<void> Function(BuildContext context) onConfigureServer;
 
   @override
+  State<_TaskSidebar> createState() => _TaskSidebarState();
+}
+
+class _TaskSidebarState extends State<_TaskSidebar> {
+  static const double _taskExtent = 44;
+
+  final ScrollController _scrollController = ScrollController();
+  String? _lastSelectedTaskId;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
     final filteredTasks = controller.filteredTasks;
+    final selectedTaskId = controller.selectedTaskId;
+    if (selectedTaskId != _lastSelectedTaskId) {
+      _lastSelectedTaskId = selectedTaskId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToSelectedTask(filteredTasks, selectedTaskId);
+      });
+    }
 
     return ColoredBox(
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -185,8 +220,8 @@ class _TaskSidebar extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Server settings (${serverUri.toString()})',
-                  onPressed: () => onConfigureServer(context),
+                  tooltip: 'Server settings (${widget.serverUri.toString()})',
+                  onPressed: () => widget.onConfigureServer(context),
                   icon: const Icon(Icons.settings_rounded),
                 ),
                 const SizedBox(width: 4),
@@ -220,6 +255,8 @@ class _TaskSidebar extends StatelessWidget {
             child: filteredTasks.isEmpty
                 ? Center(child: Text('No ${controller.filter.label} tasks'))
                 : ListView.builder(
+                    controller: _scrollController,
+                    itemExtent: _taskExtent,
                     itemCount: filteredTasks.length,
                     itemBuilder: (context, index) {
                       final task = filteredTasks[index];
@@ -241,6 +278,35 @@ class _TaskSidebar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _scrollToSelectedTask(List<Task> tasks, String? selectedTaskId) {
+    if (!_scrollController.hasClients || selectedTaskId == null) {
+      return;
+    }
+
+    final selectedIndex = tasks.indexWhere((task) => task.id == selectedTaskId);
+    if (selectedIndex == -1) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final taskTop = selectedIndex * _taskExtent;
+    final taskBottom = taskTop + _taskExtent;
+    final viewportTop = position.pixels;
+    final viewportBottom = viewportTop + position.viewportDimension;
+    final targetOffset = switch ((taskTop, taskBottom)) {
+      (final top, _) when top < viewportTop => top,
+      (_, final bottom) when bottom > viewportBottom =>
+        bottom - position.viewportDimension,
+      _ => null,
+    };
+
+    if (targetOffset != null) {
+      _scrollController.jumpTo(
+        targetOffset.clamp(position.minScrollExtent, position.maxScrollExtent),
+      );
+    }
   }
 }
 
