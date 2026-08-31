@@ -34,6 +34,7 @@ class TaskController extends ChangeNotifier {
   List<Task> _tasks = [];
   List<TimeEntry> _timeEntries = [];
   final List<String> _selectedTaskIds = [];
+  String? _selectionAnchorTaskId;
   String? _activeTaskId;
   String? _activeEntryId;
   DateTime? _activeStartedAt;
@@ -148,7 +149,12 @@ class TaskController extends ChangeNotifier {
     }
   }
 
-  void selectTask(String taskId, {bool additive = false}) {
+  void selectTask(String taskId, {bool additive = false, bool range = false}) {
+    if (range && _selectTaskRange(taskId)) {
+      notifyListeners();
+      return;
+    }
+
     if (!additive) {
       _selectedTaskIds
         ..clear()
@@ -157,6 +163,22 @@ class TaskController extends ChangeNotifier {
       _selectedTaskIds.remove(taskId);
     } else {
       _selectedTaskIds.add(taskId);
+    }
+    _selectionAnchorTaskId = taskId;
+    notifyListeners();
+  }
+
+  void selectAllVisibleTasks() {
+    final visibleTaskIds = filteredTasks.map((task) => task.id).toList();
+    _selectedTaskIds
+      ..clear()
+      ..addAll(visibleTaskIds);
+    if (visibleTaskIds.isNotEmpty) {
+      if (!visibleTaskIds.contains(_selectionAnchorTaskId)) {
+        _selectionAnchorTaskId = visibleTaskIds.first;
+      }
+    } else {
+      _selectionAnchorTaskId = null;
     }
     notifyListeners();
   }
@@ -202,6 +224,7 @@ class TaskController extends ChangeNotifier {
     _selectedTaskIds
       ..clear()
       ..add(task.id);
+    _selectionAnchorTaskId = task.id;
     await _save();
     notifyListeners();
   }
@@ -499,6 +522,9 @@ class TaskController extends ChangeNotifier {
     _selectedTaskIds.clear();
     if (visibleTasks.isNotEmpty) {
       _selectedTaskIds.add(visibleTasks.first.id);
+      _selectionAnchorTaskId = visibleTasks.first.id;
+    } else {
+      _selectionAnchorTaskId = null;
     }
   }
 
@@ -522,6 +548,7 @@ class TaskController extends ChangeNotifier {
     _selectedTaskIds
       ..clear()
       ..add(nextTaskId);
+    _selectionAnchorTaskId = nextTaskId;
     notifyListeners();
   }
 
@@ -532,7 +559,28 @@ class TaskController extends ChangeNotifier {
     });
     if (_selectedTaskIds.isEmpty) {
       _selectFirstVisibleTask();
+    } else if (!_selectedTaskIds.contains(_selectionAnchorTaskId)) {
+      _selectionAnchorTaskId = _selectedTaskIds.last;
     }
+  }
+
+  bool _selectTaskRange(String taskId) {
+    final visibleTaskIds = filteredTasks.map((task) => task.id).toList();
+    final anchorIndex = visibleTaskIds.indexOf(_selectionAnchorTaskId ?? '');
+    final taskIndex = visibleTaskIds.indexOf(taskId);
+    if (anchorIndex == -1 || taskIndex == -1) {
+      return false;
+    }
+
+    final firstIndex = anchorIndex < taskIndex ? anchorIndex : taskIndex;
+    final lastIndex = anchorIndex > taskIndex ? anchorIndex : taskIndex;
+    final rangeTaskIds = visibleTaskIds.sublist(firstIndex, lastIndex + 1);
+    for (final rangeTaskId in rangeTaskIds) {
+      if (!_selectedTaskIds.contains(rangeTaskId)) {
+        _selectedTaskIds.add(rangeTaskId);
+      }
+    }
+    return true;
   }
 
   void _restoreOpenTimer() {

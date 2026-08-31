@@ -32,6 +32,8 @@ class TaskListScreen extends StatelessWidget {
                 controller.selectPreviousTask,
             const SingleActivator(LogicalKeyboardKey.arrowDown):
                 controller.selectNextTask,
+            const SingleActivator(LogicalKeyboardKey.keyA, control: true):
+                controller.selectAllVisibleTasks,
           },
           child: Focus(
             autofocus: true,
@@ -270,6 +272,7 @@ class _TaskSidebarState extends State<_TaskSidebar> {
                         onTap: () => controller.selectTask(
                           task.id,
                           additive: HardwareKeyboard.instance.isControlPressed,
+                          range: HardwareKeyboard.instance.isShiftPressed,
                         ),
                       );
                     },
