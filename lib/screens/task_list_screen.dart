@@ -226,9 +226,14 @@ class _TaskSidebar extends StatelessWidget {
                       return TaskCard(
                         task: task,
                         total: controller.totalForTask(task.id),
-                        isSelected: controller.selectedTaskId == task.id,
+                        isSelected: controller.selectedTaskIds.contains(
+                          task.id,
+                        ),
                         isRunning: controller.activeTaskId == task.id,
-                        onTap: () => controller.selectTask(task.id),
+                        onTap: () => controller.selectTask(
+                          task.id,
+                          additive: HardwareKeyboard.instance.isControlPressed,
+                        ),
                       );
                     },
                   ),
@@ -246,13 +251,21 @@ class _TaskDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final task = controller.selectedTask;
-    if (task == null) {
+    final tasks = controller.selectedTasks;
+    if (tasks.isEmpty) {
       return const Center(child: Text('Select a task'));
     }
 
-    final entries = controller.entriesForTask(task.id);
-    final isRunning = controller.activeTaskId == task.id;
+    final task = tasks.last;
+    final taskIds = tasks.map((task) => task.id).toList();
+    final entries = controller.entriesForTasks(taskIds);
+    final isMultiple = tasks.length > 1;
+    final isRunning = !isMultiple && controller.activeTaskId == task.id;
+    final commonStatus =
+        tasks.every((selectedTask) => selectedTask.status == task.status)
+        ? task.status
+        : null;
+    final allArchived = tasks.every((selectedTask) => selectedTask.isArchived);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
@@ -260,52 +273,58 @@ class _TaskDetails extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SelectableText(
-                      task.title,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    if (task.description.isNotEmpty) ...[
-                      const SizedBox(height: 8),
+          if (isMultiple)
+            SelectableText(
+              '${tasks.length} tasks selected',
+              style: Theme.of(context).textTheme.headlineMedium,
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       SelectableText(
-                        task.description,
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        task.title,
+                        style: Theme.of(context).textTheme.headlineMedium,
                       ),
+                      if (task.description.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          task.description,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 20),
-              IconButton(
-                tooltip: 'Edit task',
-                onPressed: () =>
-                    _showTaskDialog(context, controller, existingTask: task),
-                icon: const Icon(Icons.edit_outlined),
-              ),
-              IconButton(
-                tooltip: task.isArchived ? 'Unarchive task' : 'Archive task',
-                onPressed: () => task.isArchived
-                    ? controller.unarchiveTask(task.id)
-                    : controller.archiveTask(task.id),
-                icon: Icon(
-                  task.isArchived
-                      ? Icons.unarchive_outlined
-                      : Icons.archive_outlined,
+                const SizedBox(width: 20),
+                IconButton(
+                  tooltip: 'Edit task',
+                  onPressed: () =>
+                      _showTaskDialog(context, controller, existingTask: task),
+                  icon: const Icon(Icons.edit_outlined),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Delete task',
-                onPressed: () => _confirmDelete(context, controller, task),
-                icon: const Icon(Icons.delete_outline_rounded),
-              ),
-            ],
-          ),
+                IconButton(
+                  tooltip: task.isArchived ? 'Unarchive task' : 'Archive task',
+                  onPressed: () => task.isArchived
+                      ? controller.unarchiveTask(task.id)
+                      : controller.archiveTask(task.id),
+                  icon: Icon(
+                    task.isArchived
+                        ? Icons.unarchive_outlined
+                        : Icons.archive_outlined,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Delete task',
+                  onPressed: () => _confirmDelete(context, controller, task),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ],
+            ),
           const SizedBox(height: 28),
           Wrap(
             spacing: 12,
@@ -313,7 +332,7 @@ class _TaskDetails extends StatelessWidget {
             children: [
               _MetricTile(
                 label: 'Total',
-                value: formatDuration(controller.totalForTask(task.id)),
+                value: formatDuration(controller.totalForTasks(taskIds)),
                 icon: Icons.timelapse_rounded,
               ),
               _MetricTile(
@@ -323,14 +342,24 @@ class _TaskDetails extends StatelessWidget {
               ),
               _MetricTile(
                 label: 'Status',
-                value: task.status.label,
-                icon: taskStatusIcon(task.status),
-                iconColor: taskStatusColor(task.status),
+                value: commonStatus?.label ?? 'Mixed',
+                icon: commonStatus == null
+                    ? Icons.rule_rounded
+                    : taskStatusIcon(commonStatus),
+                iconColor: commonStatus == null
+                    ? colorScheme.onSurfaceVariant
+                    : taskStatusColor(commonStatus),
               ),
               _MetricTile(
-                label: 'Archive',
-                value: task.isArchived ? 'Archived' : 'Current',
-                icon: task.isArchived
+                label: isMultiple ? 'Tasks' : 'Archive',
+                value: isMultiple
+                    ? tasks.length.toString()
+                    : task.isArchived
+                    ? 'Archived'
+                    : 'Current',
+                icon: isMultiple
+                    ? Icons.checklist_rounded
+                    : task.isArchived
                     ? Icons.archive_outlined
                     : Icons.inventory_2_outlined,
               ),
@@ -341,15 +370,16 @@ class _TaskDetails extends StatelessWidget {
             spacing: 12,
             runSpacing: 8,
             children: [
-              FilledButton.icon(
-                onPressed: isRunning
-                    ? controller.stopTimer
-                    : () => controller.startTimer(task.id),
-                icon: Icon(
-                  isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              if (!isMultiple)
+                FilledButton.icon(
+                  onPressed: isRunning
+                      ? controller.stopTimer
+                      : () => controller.startTimer(task.id),
+                  icon: Icon(
+                    isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                  ),
+                  label: Text(isRunning ? 'Stop timer' : 'Start timer'),
                 ),
-                label: Text(isRunning ? 'Stop timer' : 'Start timer'),
-              ),
               MenuAnchor(
                 builder: (context, menuController, child) {
                   return OutlinedButton.icon(
@@ -357,10 +387,14 @@ class _TaskDetails extends StatelessWidget {
                         ? menuController.close
                         : menuController.open,
                     icon: Icon(
-                      taskStatusIcon(task.status),
-                      color: taskStatusColor(task.status),
+                      commonStatus == null
+                          ? Icons.rule_rounded
+                          : taskStatusIcon(commonStatus),
+                      color: commonStatus == null
+                          ? colorScheme.onSurfaceVariant
+                          : taskStatusColor(commonStatus),
                     ),
-                    label: Text(task.status.label),
+                    label: Text(isMultiple ? 'Set status' : task.status.label),
                   );
                 },
                 menuChildren: TaskStatus.values.map((status) {
@@ -370,28 +404,32 @@ class _TaskDetails extends StatelessWidget {
                       color: taskStatusColor(status),
                     ),
                     onPressed: () =>
-                        controller.changeTaskStatus(task.id, status),
+                        controller.changeTasksStatus(taskIds, status),
                     child: Text(status.label),
                   );
                 }).toList(),
               ),
               FilledButton.tonalIcon(
-                onPressed: task.status == TaskStatus.completed
+                onPressed:
+                    tasks.every(
+                      (selectedTask) =>
+                          selectedTask.status == TaskStatus.completed,
+                    )
                     ? null
-                    : () => controller.completeTask(task.id),
+                    : () => controller.completeTasks(taskIds),
                 icon: const Icon(Icons.check_rounded),
                 label: const Text('Complete'),
               ),
               OutlinedButton.icon(
-                onPressed: () => task.isArchived
-                    ? controller.unarchiveTask(task.id)
-                    : controller.archiveTask(task.id),
+                onPressed: () => allArchived
+                    ? controller.unarchiveTasks(taskIds)
+                    : controller.archiveTasks(taskIds),
                 icon: Icon(
-                  task.isArchived
+                  allArchived
                       ? Icons.unarchive_outlined
                       : Icons.archive_outlined,
                 ),
-                label: Text(task.isArchived ? 'Unarchive' : 'Archive'),
+                label: Text(allArchived ? 'Unarchive' : 'Archive'),
               ),
             ],
           ),
@@ -404,12 +442,16 @@ class _TaskDetails extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    _showTimeEntryDialog(context, controller, taskId: task.id),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add entry'),
-              ),
+              if (!isMultiple)
+                OutlinedButton.icon(
+                  onPressed: () => _showTimeEntryDialog(
+                    context,
+                    controller,
+                    taskId: task.id,
+                  ),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Add entry'),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -422,12 +464,17 @@ class _TaskDetails extends StatelessWidget {
                     ),
                   )
                 : _TimeEntryGroups(
-                    taskId: task.id,
+                    selectionKey: taskIds.join(','),
                     entries: entries,
+                    taskNamesById: {
+                      for (final selectedTask in tasks)
+                        selectedTask.id: selectedTask.title,
+                    },
+                    showTaskNames: isMultiple,
                     onEdit: (entry) => _showTimeEntryDialog(
                       context,
                       controller,
-                      taskId: task.id,
+                      taskId: entry.taskId,
                       existingEntry: entry,
                     ),
                     onDelete: (entry) =>
@@ -442,14 +489,18 @@ class _TaskDetails extends StatelessWidget {
 
 class _TimeEntryGroups extends StatelessWidget {
   const _TimeEntryGroups({
-    required this.taskId,
+    required this.selectionKey,
     required this.entries,
+    required this.taskNamesById,
+    required this.showTaskNames,
     required this.onEdit,
     required this.onDelete,
   });
 
-  final String taskId;
+  final String selectionKey;
   final List<TimeEntry> entries;
+  final Map<String, String> taskNamesById;
+  final bool showTaskNames;
   final ValueChanged<TimeEntry> onEdit;
   final ValueChanged<TimeEntry> onDelete;
 
@@ -463,7 +514,7 @@ class _TimeEntryGroups extends StatelessWidget {
       itemBuilder: (context, index) {
         final group = groups[index];
         return ExpansionTile(
-          key: PageStorageKey('$taskId:${group.date.toIso8601String()}'),
+          key: PageStorageKey('$selectionKey:${group.date.toIso8601String()}'),
           initiallyExpanded: _isSameDate(group.date, today),
           shape: const Border(),
           collapsedShape: const Border(),
@@ -484,6 +535,7 @@ class _TimeEntryGroups extends StatelessWidget {
           children: group.entries.map((entry) {
             return _TimeEntryRow(
               entry: entry,
+              taskName: showTaskNames ? taskNamesById[entry.taskId] : null,
               onEdit: () => onEdit(entry),
               onDelete: () => onDelete(entry),
             );
@@ -537,11 +589,13 @@ bool _isSameDate(DateTime first, DateTime second) {
 class _TimeEntryRow extends StatelessWidget {
   const _TimeEntryRow({
     required this.entry,
+    required this.taskName,
     required this.onEdit,
     required this.onDelete,
   });
 
   final TimeEntry entry;
+  final String? taskName;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -557,7 +611,7 @@ class _TimeEntryRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  formatDuration(entry.duration),
+                  [formatDuration(entry.duration), ?taskName].join('  '),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 2),

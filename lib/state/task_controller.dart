@@ -33,7 +33,7 @@ class TaskController extends ChangeNotifier {
 
   List<Task> _tasks = [];
   List<TimeEntry> _timeEntries = [];
-  String? _selectedTaskId;
+  final List<String> _selectedTaskIds = [];
   String? _activeTaskId;
   String? _activeEntryId;
   DateTime? _activeStartedAt;
@@ -44,7 +44,9 @@ class TaskController extends ChangeNotifier {
 
   List<Task> get tasks => List.unmodifiable(_tasks);
   List<TimeEntry> get timeEntries => List.unmodifiable(_timeEntries);
-  String? get selectedTaskId => _selectedTaskId;
+  String? get selectedTaskId =>
+      _selectedTaskIds.isEmpty ? null : _selectedTaskIds.last;
+  List<String> get selectedTaskIds => List.unmodifiable(_selectedTaskIds);
   String? get activeTaskId => _activeTaskId;
   String? get activeEntryId => _activeEntryId;
   DateTime? get activeStartedAt => _activeStartedAt;
@@ -95,11 +97,19 @@ class TaskController extends ChangeNotifier {
   }
 
   Task? get selectedTask {
-    if (_selectedTaskId == null) {
+    final taskId = selectedTaskId;
+    if (taskId == null) {
       return null;
     }
 
-    return _taskById(_selectedTaskId!);
+    return _taskById(taskId);
+  }
+
+  List<Task> get selectedTasks {
+    return _selectedTaskIds
+        .map(_taskById)
+        .whereType<Task>()
+        .toList(growable: false);
   }
 
   Task? get activeTask {
@@ -138,31 +148,29 @@ class TaskController extends ChangeNotifier {
     }
   }
 
-  void selectTask(String taskId) {
-    _selectedTaskId = taskId;
+  void selectTask(String taskId, {bool additive = false}) {
+    if (!additive) {
+      _selectedTaskIds
+        ..clear()
+        ..add(taskId);
+    } else if (_selectedTaskIds.contains(taskId)) {
+      _selectedTaskIds.remove(taskId);
+    } else {
+      _selectedTaskIds.add(taskId);
+    }
     notifyListeners();
   }
 
   void setFilter(TaskListFilter filter) {
     _filter = filter;
-    final selectedTask = _selectedTaskId == null
-        ? null
-        : _taskById(_selectedTaskId!);
-    if (selectedTask == null || !_matchesFilter(selectedTask)) {
-      _selectFirstVisibleTask();
-    }
+    _retainVisibleSelection();
     notifyListeners();
   }
 
   void applyStore(TaskStore store) {
     _tasks = store.tasks;
     _timeEntries = store.timeEntries;
-    final selectedTask = _selectedTaskId == null
-        ? null
-        : _taskById(_selectedTaskId!);
-    if (selectedTask == null || !_matchesFilter(selectedTask)) {
-      _selectFirstVisibleTask();
-    }
+    _retainVisibleSelection();
     _restoreOpenTimer();
     notifyListeners();
   }
@@ -183,7 +191,9 @@ class TaskController extends ChangeNotifier {
 
     _tasks = [task, ..._tasks];
     _filter = TaskListFilter.work;
-    _selectedTaskId = task.id;
+    _selectedTaskIds
+      ..clear()
+      ..add(task.id);
     await _save();
     notifyListeners();
   }
@@ -197,62 +207,95 @@ class TaskController extends ChangeNotifier {
   }
 
   Future<void> changeTaskStatus(String taskId, TaskStatus status) async {
+    await changeTasksStatus([taskId], status);
+  }
+
+  Future<void> changeTasksStatus(
+    Iterable<String> taskIds,
+    TaskStatus status,
+  ) async {
+    final changedTaskIds = taskIds.toSet();
+    if (changedTaskIds.isEmpty) {
+      return;
+    }
+
     final now = DateTime.now().toUtc();
     _tasks = _tasks.map((task) {
-      if (task.id != taskId) {
+      if (!changedTaskIds.contains(task.id)) {
         return task;
       }
 
       return task.copyWith(status: status, updatedAt: now);
     }).toList();
     await _save();
-    if (_selectedTaskId == taskId && !_matchesFilter(_taskById(taskId)!)) {
+    if (selectedTasks.any((task) => !_matchesFilter(task))) {
       _filter = _filterForStatus(status);
     }
     notifyListeners();
   }
 
   Future<void> completeTask(String taskId) async {
-    if (_activeTaskId == taskId) {
+    await completeTasks([taskId]);
+  }
+
+  Future<void> completeTasks(Iterable<String> taskIds) async {
+    final completedTaskIds = taskIds.toSet();
+    if (_activeTaskId != null && completedTaskIds.contains(_activeTaskId)) {
       await stopTimer();
     }
 
-    await changeTaskStatus(taskId, TaskStatus.completed);
+    await changeTasksStatus(completedTaskIds, TaskStatus.completed);
   }
 
   Future<void> archiveTask(String taskId) async {
-    if (_activeTaskId == taskId) {
+    await archiveTasks([taskId]);
+  }
+
+  Future<void> archiveTasks(Iterable<String> taskIds) async {
+    final archivedTaskIds = taskIds.toSet();
+    if (archivedTaskIds.isEmpty) {
+      return;
+    }
+
+    if (_activeTaskId != null && archivedTaskIds.contains(_activeTaskId)) {
       await stopTimer();
     }
 
     final now = DateTime.now().toUtc();
     _tasks = _tasks.map((task) {
-      if (task.id != taskId) {
+      if (!archivedTaskIds.contains(task.id)) {
         return task;
       }
 
       return task.copyWith(isArchived: true, archivedAt: now, updatedAt: now);
     }).toList();
-    _selectedTaskId = taskId;
     await _save();
     notifyListeners();
   }
 
   Future<void> unarchiveTask(String taskId) async {
+    await unarchiveTasks([taskId]);
+  }
+
+  Future<void> unarchiveTasks(Iterable<String> taskIds) async {
+    final unarchivedTaskIds = taskIds.toSet();
+    if (unarchivedTaskIds.isEmpty) {
+      return;
+    }
+
     final now = DateTime.now().toUtc();
     _tasks = _tasks.map((task) {
-      if (task.id != taskId) {
+      if (!unarchivedTaskIds.contains(task.id)) {
         return task;
       }
 
       return task.copyWith(
-        status: _unarchiveStatusForTask(taskId),
+        status: _unarchiveStatusForTask(task.id),
         isArchived: false,
         clearArchivedAt: true,
         updatedAt: now,
       );
     }).toList();
-    _selectedTaskId = taskId;
     await _save();
     notifyListeners();
   }
@@ -388,9 +431,21 @@ class TaskController extends ChangeNotifier {
     return saved;
   }
 
+  Duration totalForTasks(Iterable<String> taskIds) {
+    final selectedIds = taskIds.toSet();
+    return _timeEntries
+        .where((entry) => selectedIds.contains(entry.taskId))
+        .fold(Duration.zero, (total, entry) => total + entry.duration);
+  }
+
   List<TimeEntry> entriesForTask(String taskId) {
+    return entriesForTasks([taskId]);
+  }
+
+  List<TimeEntry> entriesForTasks(Iterable<String> taskIds) {
+    final selectedIds = taskIds.toSet();
     final entries = _timeEntries
-        .where((entry) => entry.taskId == taskId)
+        .where((entry) => selectedIds.contains(entry.taskId))
         .toList();
     entries.sort((a, b) => b.startedAt.compareTo(a.startedAt));
     return entries;
@@ -433,7 +488,20 @@ class TaskController extends ChangeNotifier {
 
   void _selectFirstVisibleTask() {
     final visibleTasks = filteredTasks;
-    _selectedTaskId = visibleTasks.isEmpty ? null : visibleTasks.first.id;
+    _selectedTaskIds.clear();
+    if (visibleTasks.isNotEmpty) {
+      _selectedTaskIds.add(visibleTasks.first.id);
+    }
+  }
+
+  void _retainVisibleSelection() {
+    _selectedTaskIds.removeWhere((taskId) {
+      final task = _taskById(taskId);
+      return task == null || !_matchesFilter(task);
+    });
+    if (_selectedTaskIds.isEmpty) {
+      _selectFirstVisibleTask();
+    }
   }
 
   void _restoreOpenTimer() {
