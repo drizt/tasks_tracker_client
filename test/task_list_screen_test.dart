@@ -93,7 +93,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.tasks.single.isArchived, isTrue);
-    expect(controller.filter, TaskListFilter.archive);
+    expect(controller.filter, TaskListFilter.work);
     expect(find.widgetWithText(OutlinedButton, 'Unarchive'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Unarchive'));

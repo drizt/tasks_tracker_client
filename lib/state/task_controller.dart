@@ -233,7 +233,6 @@ class TaskController extends ChangeNotifier {
 
       return task.copyWith(isArchived: true, archivedAt: now, updatedAt: now);
     }).toList();
-    _filter = TaskListFilter.archive;
     _selectedTaskId = taskId;
     await _save();
     notifyListeners();
@@ -253,10 +252,6 @@ class TaskController extends ChangeNotifier {
         updatedAt: now,
       );
     }).toList();
-    final task = _taskById(taskId);
-    if (task != null) {
-      _filter = _filterForStatus(task.status);
-    }
     _selectedTaskId = taskId;
     await _save();
     notifyListeners();

@@ -268,17 +268,19 @@ void main() {
     final controller = TaskController(repository);
 
     await controller.load();
+    controller.setFilter(TaskListFilter.completed);
     await controller.archiveTask('task-1');
 
-    expect(controller.filter, TaskListFilter.archive);
-    expect(controller.filteredTasks.single.isArchived, isTrue);
-    expect(controller.filteredTasks.single.status, TaskStatus.completed);
+    expect(controller.filter, TaskListFilter.completed);
+    expect(controller.tasks.single.isArchived, isTrue);
+    expect(controller.tasks.single.status, TaskStatus.completed);
 
+    controller.setFilter(TaskListFilter.archive);
     await controller.unarchiveTask('task-1');
 
-    expect(controller.filter, TaskListFilter.work);
-    expect(controller.filteredTasks.single.isArchived, isFalse);
-    expect(controller.filteredTasks.single.status, TaskStatus.newTask);
+    expect(controller.filter, TaskListFilter.archive);
+    expect(controller.tasks.single.isArchived, isFalse);
+    expect(controller.tasks.single.status, TaskStatus.newTask);
   });
 
   test('unarchives tasks with time entries as active tasks', () async {
@@ -308,11 +310,12 @@ void main() {
 
     await controller.load();
     await controller.archiveTask('task-1');
+    controller.setFilter(TaskListFilter.archive);
     await controller.unarchiveTask('task-1');
 
-    expect(controller.filter, TaskListFilter.work);
-    expect(controller.filteredTasks.single.isArchived, isFalse);
-    expect(controller.filteredTasks.single.status, TaskStatus.active);
+    expect(controller.filter, TaskListFilter.archive);
+    expect(controller.tasks.single.isArchived, isFalse);
+    expect(controller.tasks.single.status, TaskStatus.active);
   });
 
   test(
