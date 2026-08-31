@@ -72,6 +72,121 @@ void main() {
     ]);
   });
 
+  test('supports additive task selection and aggregate time data', () async {
+    final repository = _MemoryTaskRepository(
+      TaskStore(
+        tasks: [_task('task-1'), _task('task-2'), _task('task-3')],
+        timeEntries: [
+          TimeEntry(
+            id: 'entry-1',
+            taskId: 'task-1',
+            startedAt: DateTime.utc(2026, 6, 26, 8),
+            endedAt: DateTime.utc(2026, 6, 26, 8, 30),
+          ),
+          TimeEntry(
+            id: 'entry-2',
+            taskId: 'task-2',
+            startedAt: DateTime.utc(2026, 6, 26, 10),
+            endedAt: DateTime.utc(2026, 6, 26, 11),
+          ),
+        ],
+      ),
+    );
+    final controller = TaskController(repository);
+
+    await controller.load();
+    controller.selectTask('task-1');
+    controller.selectTask('task-2', additive: true);
+
+    expect(controller.selectedTaskIds, ['task-1', 'task-2']);
+    expect(
+      controller.totalForTasks(controller.selectedTaskIds),
+      const Duration(minutes: 90),
+    );
+    expect(
+      controller
+          .entriesForTasks(controller.selectedTaskIds)
+          .map((entry) => entry.id),
+      ['entry-2', 'entry-1'],
+    );
+
+    controller.selectTask('task-1', additive: true);
+    expect(controller.selectedTaskIds, ['task-2']);
+
+    controller.selectTask('task-3');
+    expect(controller.selectedTaskIds, ['task-3']);
+  });
+
+  test('changes the status of all selected tasks', () async {
+    final repository = _MemoryTaskRepository(
+      TaskStore(
+        tasks: [_task('task-1'), _task('task-2')],
+        timeEntries: const [],
+      ),
+    );
+    final controller = TaskController(repository);
+
+    await controller.load();
+    controller.selectTask('task-2', additive: true);
+    await controller.changeTasksStatus(
+      controller.selectedTaskIds,
+      TaskStatus.deferred,
+    );
+
+    expect(
+      controller.tasks.map((task) => task.status),
+      everyElement(TaskStatus.deferred),
+    );
+    expect(controller.filter, TaskListFilter.deferred);
+    expect(controller.selectedTaskIds, ['task-1', 'task-2']);
+    expect(
+      repository.savedStore!.tasks.map((task) => task.status),
+      everyElement(TaskStatus.deferred),
+    );
+  });
+
+  test('completes, archives, and unarchives all selected tasks', () async {
+    final repository = _MemoryTaskRepository(
+      TaskStore(
+        tasks: [_task('task-1'), _task('task-2')],
+        timeEntries: [
+          TimeEntry(
+            id: 'entry-1',
+            taskId: 'task-1',
+            startedAt: DateTime.now().toUtc().subtract(
+              const Duration(minutes: 10),
+            ),
+          ),
+        ],
+      ),
+    );
+    final controller = TaskController(repository);
+
+    await controller.load();
+    controller.selectTask('task-2', additive: true);
+    await controller.completeTasks(controller.selectedTaskIds);
+
+    expect(controller.hasActiveTimer, isFalse);
+    expect(
+      controller.tasks.map((task) => task.status),
+      everyElement(TaskStatus.completed),
+    );
+
+    await controller.archiveTasks(controller.selectedTaskIds);
+    expect(
+      controller.tasks.map((task) => task.isArchived),
+      everyElement(isTrue),
+    );
+
+    await controller.unarchiveTasks(controller.selectedTaskIds);
+    expect(
+      controller.tasks.map((task) => task.isArchived),
+      everyElement(isFalse),
+    );
+    expect(controller.tasks.first.status, TaskStatus.active);
+    expect(controller.tasks.last.status, TaskStatus.newTask);
+  });
+
   test('adds a task and saves it through the repository', () async {
     final repository = _MemoryTaskRepository(
       const TaskStore(tasks: [], timeEntries: []),

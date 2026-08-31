@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tasks_tracker_client/data/task_repository.dart';
 import 'package:tasks_tracker_client/data/task_store.dart';
@@ -141,6 +142,106 @@ void main() {
     final controller = await _pumpApp(tester, _storeWithTask(description: ''));
 
     expect(find.text('No description'), findsNothing);
+
+    controller.dispose();
+  });
+
+  testWidgets('Ctrl selects tasks and shows their combined time entries', (
+    tester,
+  ) async {
+    final today = DateTime.now();
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'First task'),
+          _taskForWidgetTest('task-2', 'Second task'),
+        ],
+        timeEntries: [
+          TimeEntry(
+            id: 'entry-1',
+            taskId: 'task-1',
+            startedAt: DateTime(today.year, today.month, today.day, 8),
+            endedAt: DateTime(today.year, today.month, today.day, 8, 30),
+          ),
+          TimeEntry(
+            id: 'entry-2',
+            taskId: 'task-2',
+            startedAt: DateTime(today.year, today.month, today.day, 9),
+            endedAt: DateTime(today.year, today.month, today.day, 10),
+          ),
+        ],
+      ),
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(find.text('First task'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedTaskIds, ['task-2', 'task-1']);
+    expect(find.text('2 tasks selected'), findsOneWidget);
+    expect(find.text('1:30:00'), findsWidgets);
+    expect(find.text('30:00  First task'), findsOneWidget);
+    expect(find.text('1:00:00  Second task'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Set status'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Complete'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Archive'), findsOneWidget);
+    expect(find.text('Add entry'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Complete'));
+    await tester.pumpAndSettle();
+    expect(
+      controller.tasks.map((task) => task.status),
+      everyElement(TaskStatus.completed),
+    );
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Archive'));
+    await tester.pumpAndSettle();
+    expect(
+      controller.tasks.map((task) => task.isArchived),
+      everyElement(isTrue),
+    );
+    expect(find.widgetWithText(OutlinedButton, 'Unarchive'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Unarchive'));
+    await tester.pumpAndSettle();
+    expect(
+      controller.tasks.map((task) => task.isArchived),
+      everyElement(isFalse),
+    );
+
+    controller.dispose();
+  });
+
+  testWidgets('applies a status to all Ctrl-selected tasks', (tester) async {
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'First task'),
+          _taskForWidgetTest('task-2', 'Second task'),
+        ],
+        timeEntries: const [],
+      ),
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(find.text('Second task'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Set status'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(MenuItemButton, 'Canceled'));
+    await tester.pumpAndSettle();
+
+    expect(
+      controller.tasks.map((task) => task.status),
+      everyElement(TaskStatus.canceled),
+    );
+    expect(controller.filter, TaskListFilter.canceled);
+    expect(controller.selectedTaskIds, ['task-1', 'task-2']);
+    expect(find.text('2 tasks selected'), findsOneWidget);
 
     controller.dispose();
   });
@@ -392,6 +493,17 @@ TaskStore _storeWithTask({
       ),
     ],
     timeEntries: entries,
+  );
+}
+
+Task _taskForWidgetTest(String id, String title) {
+  return Task(
+    id: id,
+    title: title,
+    description: '',
+    status: TaskStatus.active,
+    createdAt: DateTime.utc(2026, 6, 26, 8),
+    updatedAt: DateTime.utc(2026, 6, 26, 8),
   );
 }
 
