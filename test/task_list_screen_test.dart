@@ -123,6 +123,62 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('moves and resizes the edit task dialog', (tester) async {
+    final controller = await _pumpApp(tester, _storeWithTask());
+
+    await tester.tap(find.byTooltip('Edit task'));
+    await tester.pumpAndSettle();
+
+    final dialog = find.byType(Dialog);
+    final initialTopLeft = tester.getTopLeft(dialog);
+    final initialSize = tester.getSize(dialog);
+
+    await tester.drag(
+      find.byKey(const ValueKey('task-dialog-title-bar')),
+      const Offset(100, 60),
+    );
+    await tester.pump();
+
+    expect(tester.getTopLeft(dialog), initialTopLeft + const Offset(100, 60));
+
+    await tester.drag(
+      find.byKey(const ValueKey('task-dialog-resize-handle')),
+      const Offset(80, 50),
+    );
+    await tester.pump();
+
+    expect(tester.getSize(dialog), initialSize + const Offset(80, 50));
+    expect(tester.takeException(), isNull);
+
+    controller.dispose();
+  });
+
+  testWidgets('maximizes the edit task dialog by double-clicking its title', (
+    tester,
+  ) async {
+    final controller = await _pumpApp(tester, _storeWithTask());
+
+    await tester.tap(find.byTooltip('Edit task'));
+    await tester.pumpAndSettle();
+
+    final dialog = find.byType(Dialog);
+    final titleBar = find.byKey(const ValueKey('task-dialog-title-bar'));
+    final initialSize = tester.getSize(dialog);
+
+    await tester.tap(titleBar);
+    await tester.tap(titleBar);
+    await tester.pump();
+
+    expect(tester.getTopLeft(dialog), const Offset(24, 24));
+    expect(tester.getSize(dialog).width, greaterThan(initialSize.width));
+    expect(tester.getSize(dialog).height, greaterThan(initialSize.height));
+    expect(find.byTooltip('Move task dialog'), findsNothing);
+    expect(find.byTooltip('Resize task dialog'), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    controller.dispose();
+  });
+
   testWidgets('makes selected task title and description selectable', (
     tester,
   ) async {
