@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:highlight/highlight.dart' as hl;
+import 'package:markdown/markdown.dart' as md;
 
 import '../models/task.dart';
 import '../models/time_entry.dart';
@@ -8,6 +11,13 @@ import '../utils/duration_format.dart';
 import '../utils/task_status_style.dart';
 import '../widgets/active_timer_bar.dart';
 import '../widgets/task_card.dart';
+
+const _monospaceFontFamily = 'Consolas';
+const _monospaceFontFamilyFallback = [
+  'Menlo',
+  'Liberation Mono',
+  'DejaVu Sans Mono',
+];
 
 class TaskListScreen extends StatelessWidget {
   const TaskListScreen({
@@ -369,9 +379,18 @@ class _TaskDetailsState extends State<_TaskDetails> {
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final descriptionStyle = Theme.of(
-                        context,
-                      ).textTheme.bodyLarge;
+                      final theme = Theme.of(context);
+                      final descriptionStyle = theme.textTheme.bodyLarge
+                          ?.copyWith(
+                            fontFamily: _monospaceFontFamily,
+                            fontFamilyFallback: _monospaceFontFamilyFallback,
+                          );
+                      final markdownTheme = theme.copyWith(
+                        textTheme: theme.textTheme.apply(
+                          fontFamily: _monospaceFontFamily,
+                          fontFamilyFallback: _monospaceFontFamilyFallback,
+                        ),
+                      );
                       final descriptionPainter = TextPainter(
                         text: TextSpan(
                           text: task.description,
@@ -381,8 +400,32 @@ class _TaskDetailsState extends State<_TaskDetails> {
                         textDirection: Directionality.of(context),
                         textScaler: MediaQuery.textScalerOf(context),
                       )..layout(maxWidth: constraints.maxWidth);
+                      final collapsedDescriptionHeight =
+                          descriptionPainter.preferredLineHeight * 3;
                       final canExpand = descriptionPainter.didExceedMaxLines;
                       descriptionPainter.dispose();
+                      final markdownStyleSheet = MarkdownStyleSheet.fromTheme(
+                        markdownTheme,
+                      );
+                      MarkdownBody descriptionMarkdown() => MarkdownBody(
+                        data: task.description,
+                        selectable: true,
+                        softLineBreak: true,
+                        styleSheet: markdownStyleSheet.copyWith(
+                          p: descriptionStyle,
+                          code: markdownStyleSheet.code?.copyWith(
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
+                            fontSize: descriptionStyle?.fontSize,
+                            height: descriptionStyle?.height,
+                            fontFamily: _monospaceFontFamily,
+                            fontFamilyFallback: _monospaceFontFamilyFallback,
+                          ),
+                        ),
+                        builders: {
+                          'pre': _FencedCodeBuilder(theme.colorScheme),
+                        },
+                      );
 
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,17 +457,23 @@ class _TaskDetailsState extends State<_TaskDetails> {
                                 ),
                                 if (task.description.isNotEmpty) ...[
                                   const SizedBox(height: 8),
-                                  SelectionArea(
+                                  Theme(
                                     key: const ValueKey('task-description'),
-                                    child: Text(
-                                      task.description,
-                                      maxLines: _isDescriptionExpanded
-                                          ? null
-                                          : 3,
-                                      overflow: _isDescriptionExpanded
-                                          ? null
-                                          : TextOverflow.clip,
-                                      style: descriptionStyle,
+                                    data: markdownTheme,
+                                    child: ClipRect(
+                                      child:
+                                          canExpand && !_isDescriptionExpanded
+                                          ? SizedBox(
+                                              height:
+                                                  collapsedDescriptionHeight,
+                                              child: OverflowBox(
+                                                alignment: Alignment.topLeft,
+                                                minHeight: 0,
+                                                maxHeight: double.infinity,
+                                                child: descriptionMarkdown(),
+                                              ),
+                                            )
+                                          : descriptionMarkdown(),
                                     ),
                                   ),
                                 ],
@@ -620,6 +669,91 @@ class _TaskDetailsState extends State<_TaskDetails> {
         ],
       ),
     );
+  }
+}
+
+class _FencedCodeBuilder extends MarkdownElementBuilder {
+  _FencedCodeBuilder(this.colorScheme);
+
+  final ColorScheme colorScheme;
+  String? _language;
+
+  @override
+  void visitElementBefore(md.Element element) {
+    _language = null;
+    for (final child in element.children ?? const <md.Node>[]) {
+      if (child is! md.Element || child.tag != 'code') {
+        continue;
+      }
+      final className = child.attributes['class'];
+      if (className?.startsWith('language-') ?? false) {
+        _language = className!.substring('language-'.length);
+      }
+      break;
+    }
+  }
+
+  @override
+  Widget? visitText(md.Text text, TextStyle? preferredStyle) {
+    final baseStyle = (preferredStyle ?? const TextStyle()).copyWith(
+      fontFamily: _monospaceFontFamily,
+      fontFamilyFallback: _monospaceFontFamilyFallback,
+    );
+    final language = _language;
+    final TextSpan code;
+    if (language == null || language.isEmpty) {
+      code = TextSpan(text: text.text, style: baseStyle);
+    } else {
+      final result = hl.highlight.parse(text.text, language: language);
+      code = TextSpan(
+        style: baseStyle,
+        children: [
+          for (final node in result.nodes ?? const <hl.Node>[])
+            _highlightedSpan(node),
+        ],
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.all(8),
+      child: SelectableText.rich(code),
+    );
+  }
+
+  TextSpan _highlightedSpan(hl.Node node) {
+    return TextSpan(
+      text: node.value,
+      style: _tokenStyle(node.className),
+      children: [
+        for (final child in node.children ?? const <hl.Node>[])
+          _highlightedSpan(child),
+      ],
+    );
+  }
+
+  TextStyle? _tokenStyle(String? token) {
+    return switch (token) {
+      'keyword' || 'selector-tag' || 'literal' || 'section' => TextStyle(
+        color: colorScheme.primary,
+        fontWeight: FontWeight.w600,
+      ),
+      'string' ||
+      'title' ||
+      'name' ||
+      'type' ||
+      'attribute' ||
+      'symbol' ||
+      'bullet' ||
+      'addition' => TextStyle(color: colorScheme.tertiary),
+      'number' || 'built_in' => TextStyle(color: colorScheme.secondary),
+      'comment' || 'quote' || 'meta' => TextStyle(
+        color: colorScheme.onSurfaceVariant,
+        fontStyle: FontStyle.italic,
+      ),
+      'deletion' => TextStyle(color: colorScheme.error),
+      _ => null,
+    };
   }
 }
 
@@ -976,6 +1110,20 @@ class _TaskDialogState extends State<_TaskDialog> {
     super.dispose();
   }
 
+  void _insertDescriptionIndent() {
+    const indent = '    ';
+    final value = descriptionController.value;
+    final selection = value.selection;
+    final start = selection.isValid ? selection.start : value.text.length;
+    final end = selection.isValid ? selection.end : value.text.length;
+
+    descriptionController.value = value.copyWith(
+      text: value.text.replaceRange(start, end, indent),
+      selection: TextSelection.collapsed(offset: start + indent.length),
+      composing: TextRange.empty,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -1075,15 +1223,31 @@ class _TaskDialogState extends State<_TaskDialog> {
                                   ),
                                   const SizedBox(height: 12),
                                   Expanded(
-                                    child: TextFormField(
-                                      controller: descriptionController,
-                                      expands: true,
-                                      minLines: null,
-                                      maxLines: null,
-                                      textAlignVertical: TextAlignVertical.top,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Description',
-                                        alignLabelWithHint: true,
+                                    child: CallbackShortcuts(
+                                      bindings: {
+                                        const SingleActivator(
+                                          LogicalKeyboardKey.tab,
+                                        ): _insertDescriptionIndent,
+                                      },
+                                      child: TextFormField(
+                                        key: const ValueKey(
+                                          'task-description-editor',
+                                        ),
+                                        controller: descriptionController,
+                                        expands: true,
+                                        minLines: null,
+                                        maxLines: null,
+                                        style: const TextStyle(
+                                          fontFamily: _monospaceFontFamily,
+                                          fontFamilyFallback:
+                                              _monospaceFontFamilyFallback,
+                                        ),
+                                        textAlignVertical:
+                                            TextAlignVertical.top,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Description',
+                                          alignLabelWithHint: true,
+                                        ),
                                       ),
                                     ),
                                   ),
