@@ -7,6 +7,25 @@ import 'package:tasks_tracker_client/state/task_controller.dart';
 import 'package:tasks_tracker_client/tray/task_tray_desktop.dart';
 
 void main() {
+  test('uses platform-specific tray icon formats', () {
+    expect(
+      taskTrayIconPath(isActive: false, isWindows: false),
+      'assets/tray_icon.png',
+    );
+    expect(
+      taskTrayIconPath(isActive: true, isWindows: false),
+      'assets/tray_icon_active.png',
+    );
+    expect(
+      taskTrayIconPath(isActive: false, isWindows: true),
+      'windows/runner/resources/tray_icon.ico',
+    );
+    expect(
+      taskTrayIconPath(isActive: true, isWindows: true),
+      'windows/runner/resources/tray_icon_active.ico',
+    );
+  });
+
   test(
     'keeps tray icon shown and marks it active while a timer runs',
     () async {
@@ -31,24 +50,24 @@ void main() {
       final tray = TaskTray(host: host);
 
       await tray.idle;
-      expect(host.icons, ['assets/app_icon.png']);
+      expect(host.icons, ['assets/tray_icon.png']);
       expect(host.menu.map((item) => item.label), ['Exit']);
 
       tray.attach(controller);
       await controller.load();
       await tray.idle;
 
-      expect(host.icons, ['assets/app_icon.png']);
+      expect(host.icons, ['assets/tray_icon.png']);
 
       await controller.startTimer('task-1');
       await tray.idle;
 
-      expect(host.icons.last, 'assets/app_icon_active.png');
+      expect(host.icons.last, 'assets/tray_icon_active.png');
 
       await controller.stopTimer();
       await tray.idle;
 
-      expect(host.icons.last, 'assets/app_icon.png');
+      expect(host.icons.last, 'assets/tray_icon.png');
       expect(host.destroyCount, 0);
 
       await tray.dispose();
