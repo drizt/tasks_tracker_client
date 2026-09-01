@@ -269,6 +269,40 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('scrolls task details while keeping the task name fixed', (
+    tester,
+  ) async {
+    final controller = await _pumpApp(
+      tester,
+      _storeWithTask(
+        description: List.generate(
+          40,
+          (index) => 'Description line ${index + 1}',
+        ).join('\n'),
+      ),
+    );
+    final taskName = find.widgetWithText(SelectableText, 'Tracked task');
+    final detailsScrollView = find.byKey(
+      const ValueKey('task-details-scroll-view'),
+    );
+    final initialTaskNameTop = tester.getTopLeft(taskName).dy;
+
+    await tester.tap(find.byTooltip('Expand description'));
+    await tester.pump();
+    await tester.drag(detailsScrollView, const Offset(0, -300));
+    await tester.pump();
+
+    final scrollView = tester.widget<SingleChildScrollView>(detailsScrollView);
+    expect(scrollView.controller!.offset, greaterThan(0));
+    expect(tester.getTopLeft(taskName).dy, initialTaskNameTop);
+    expect(
+      find.ancestor(of: detailsScrollView, matching: find.byType(Scrollbar)),
+      findsOneWidget,
+    );
+
+    controller.dispose();
+  });
+
   testWidgets('highlights only fenced code with an explicit language', (
     tester,
   ) async {
@@ -653,6 +687,31 @@ final plain = 1;
     await tester.tap(find.text(formatDate(DateTime(2026, 6, 27))));
     await tester.pumpAndSettle();
     expect(find.text('Review'), findsOneWidget);
+
+    controller.dispose();
+  });
+
+  testWidgets('time entries use the task details scroll view', (tester) async {
+    final controller = await _pumpApp(
+      tester,
+      _storeWithTask(
+        entries: [
+          TimeEntry(
+            id: 'entry-1',
+            taskId: 'task-1',
+            startedAt: DateTime(2026, 6, 27, 9),
+            endedAt: DateTime(2026, 6, 27, 10),
+            note: 'Tracked work',
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey('task-details-scroll-view')),
+      findsOneWidget,
+    );
+    expect(find.byType(ListView), findsOneWidget);
 
     controller.dispose();
   });
