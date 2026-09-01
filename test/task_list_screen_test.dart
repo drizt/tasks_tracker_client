@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tasks_tracker_client/data/task_repository.dart';
@@ -179,23 +180,65 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('makes selected task title and description selectable', (
-    tester,
-  ) async {
-    final controller = await _pumpApp(tester, _storeWithTask());
+  testWidgets(
+    'renders selected task description as selectable monospace Markdown',
+    (tester) async {
+      final controller = await _pumpApp(
+        tester,
+        _storeWithTask(description: '**Task** under test'),
+      );
+      final descriptionArea = find.byKey(const ValueKey('task-description'));
+      final markdown = tester.widget<MarkdownBody>(
+        find.descendant(
+          of: descriptionArea,
+          matching: find.byType(MarkdownBody),
+        ),
+      );
 
-    expect(find.widgetWithText(SelectableText, 'Tracked task'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('task-description')),
-        matching: find.text('Task under test'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.byTooltip('Expand description'), findsNothing);
+      expect(
+        find.widgetWithText(SelectableText, 'Tracked task'),
+        findsOneWidget,
+      );
+      expect(markdown.data, '**Task** under test');
+      expect(markdown.selectable, isTrue);
+      expect(markdown.softLineBreak, isTrue);
+      expect(markdown.styleSheet?.p?.fontFamily, 'Consolas');
+      expect(markdown.styleSheet?.p?.fontFamilyFallback, [
+        'Menlo',
+        'Liberation Mono',
+        'DejaVu Sans Mono',
+      ]);
+      expect(
+        markdown.styleSheet?.code?.fontSize,
+        markdown.styleSheet?.p?.fontSize,
+      );
+      expect(
+        markdown.styleSheet?.code?.backgroundColor,
+        Theme.of(
+          tester.element(descriptionArea),
+        ).colorScheme.surfaceContainerHighest,
+      );
+      expect(find.text('**Task** under test'), findsNothing);
+      final renderedText = tester.widget<SelectableText>(
+        find.descendant(
+          of: descriptionArea,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableText &&
+                (widget.textSpan?.toPlainText().contains('Task under test') ??
+                    false),
+          ),
+        ),
+      );
+      final taskSpan = _textSpans(
+        renderedText.textSpan!,
+      ).singleWhere((span) => span.text == 'Task');
+      expect(taskSpan.style?.fontWeight, FontWeight.bold);
+      expect(find.byTooltip('Expand description'), findsNothing);
 
-    controller.dispose();
-  });
+      controller.dispose();
+    },
+  );
 
   testWidgets('collapses and expands the selected task description', (
     tester,
@@ -207,27 +250,114 @@ void main() {
       ),
     );
     final descriptionArea = find.byKey(const ValueKey('task-description'));
-    Text description() => tester.widget(
-      find.descendant(of: descriptionArea, matching: find.byType(Text)),
-    );
 
-    expect(description().maxLines, 3);
-    expect(description().overflow, TextOverflow.clip);
     expect(
-      find.descendant(of: descriptionArea, matching: find.byType(Scrollable)),
-      findsNothing,
+      find.descendant(of: descriptionArea, matching: find.byType(OverflowBox)),
+      findsOneWidget,
     );
     expect(find.byTooltip('Expand description'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Expand description'));
     await tester.pump();
 
-    expect(description().maxLines, isNull);
-    expect(description().overflow, isNull);
+    expect(
+      find.descendant(of: descriptionArea, matching: find.byType(OverflowBox)),
+      findsNothing,
+    );
     expect(find.byTooltip('Collapse description'), findsOneWidget);
 
     controller.dispose();
   });
+
+  testWidgets('highlights only fenced code with an explicit language', (
+    tester,
+  ) async {
+    final controller = await _pumpApp(
+      tester,
+      _storeWithTask(
+        description: '''
+```dart
+final answer = 42;
+```
+
+```
+final plain = 1;
+```
+''',
+      ),
+    );
+    final descriptionArea = find.byKey(const ValueKey('task-description'));
+    SelectableText codeBlock(String source) => tester.widget<SelectableText>(
+      find.descendant(
+        of: descriptionArea,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              (widget.textSpan?.toPlainText().contains(source) ?? false),
+        ),
+      ),
+    );
+
+    final highlightedCode = codeBlock('final answer = 42;');
+    final keywordSpan = _textSpans(highlightedCode.textSpan!).singleWhere(
+      (span) =>
+          span.toPlainText().contains('final') &&
+          span.style?.fontWeight == FontWeight.w600,
+    );
+    final plainCode = codeBlock('final plain = 1;');
+
+    expect(
+      keywordSpan.style?.color,
+      Theme.of(tester.element(descriptionArea)).colorScheme.primary,
+    );
+    expect(keywordSpan.style?.fontWeight, FontWeight.w600);
+    expect(plainCode.textSpan?.children, isNull);
+
+    controller.dispose();
+  });
+
+  testWidgets(
+    'uses monospace and inserts four spaces with Tab in description',
+    (tester) async {
+      final controller = await _pumpApp(tester, _storeWithTask());
+
+      await tester.tap(find.byTooltip('Edit task'));
+      await tester.pumpAndSettle();
+
+      final descriptionField = find.byKey(
+        const ValueKey('task-description-editor'),
+      );
+      final field = tester.widget<TextFormField>(descriptionField);
+      final textController = field.controller!;
+
+      await tester.tap(descriptionField);
+      textController.selection = TextSelection.collapsed(
+        offset: textController.text.length,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+
+      final editableText = tester.widget<EditableText>(
+        find.descendant(
+          of: descriptionField,
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(editableText.style.fontFamily, 'Consolas');
+      expect(editableText.style.fontFamilyFallback, [
+        'Menlo',
+        'Liberation Mono',
+        'DejaVu Sans Mono',
+      ]);
+      expect(textController.text, 'Task under test    ');
+      expect(
+        textController.selection,
+        const TextSelection.collapsed(offset: 19),
+      );
+
+      controller.dispose();
+    },
+  );
 
   testWidgets('shows nothing when selected task has no description', (
     tester,
@@ -690,6 +820,15 @@ Future<TaskController> _pumpApp(
   await tester.pumpAndSettle();
 
   return controller;
+}
+
+Iterable<TextSpan> _textSpans(InlineSpan span) sync* {
+  if (span case final TextSpan textSpan) {
+    yield textSpan;
+    for (final child in textSpan.children ?? const <InlineSpan>[]) {
+      yield* _textSpans(child);
+    }
+  }
 }
 
 TaskStore _storeWithTask({
