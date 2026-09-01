@@ -341,6 +341,13 @@ class _TaskDetails extends StatefulWidget {
 
 class _TaskDetailsState extends State<_TaskDetails> {
   bool _isDescriptionExpanded = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -377,112 +384,9 @@ class _TaskDetailsState extends State<_TaskDetails> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final theme = Theme.of(context);
-                      final descriptionStyle = theme.textTheme.bodyLarge
-                          ?.copyWith(
-                            fontFamily: _monospaceFontFamily,
-                            fontFamilyFallback: _monospaceFontFamilyFallback,
-                          );
-                      final markdownTheme = theme.copyWith(
-                        textTheme: theme.textTheme.apply(
-                          fontFamily: _monospaceFontFamily,
-                          fontFamilyFallback: _monospaceFontFamilyFallback,
-                        ),
-                      );
-                      final descriptionPainter = TextPainter(
-                        text: TextSpan(
-                          text: task.description,
-                          style: descriptionStyle,
-                        ),
-                        maxLines: 3,
-                        textDirection: Directionality.of(context),
-                        textScaler: MediaQuery.textScalerOf(context),
-                      )..layout(maxWidth: constraints.maxWidth);
-                      final collapsedDescriptionHeight =
-                          descriptionPainter.preferredLineHeight * 3;
-                      final canExpand = descriptionPainter.didExceedMaxLines;
-                      descriptionPainter.dispose();
-                      final markdownStyleSheet = MarkdownStyleSheet.fromTheme(
-                        markdownTheme,
-                      );
-                      MarkdownBody descriptionMarkdown() => MarkdownBody(
-                        data: task.description,
-                        selectable: true,
-                        softLineBreak: true,
-                        styleSheet: markdownStyleSheet.copyWith(
-                          p: descriptionStyle,
-                          code: markdownStyleSheet.code?.copyWith(
-                            backgroundColor:
-                                theme.colorScheme.surfaceContainerHighest,
-                            fontSize: descriptionStyle?.fontSize,
-                            height: descriptionStyle?.height,
-                            fontFamily: _monospaceFontFamily,
-                            fontFamilyFallback: _monospaceFontFamilyFallback,
-                          ),
-                        ),
-                        builders: {
-                          'pre': _FencedCodeBuilder(theme.colorScheme),
-                        },
-                      );
-
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (canExpand)
-                            IconButton(
-                              tooltip: _isDescriptionExpanded
-                                  ? 'Collapse description'
-                                  : 'Expand description',
-                              onPressed: () => setState(() {
-                                _isDescriptionExpanded =
-                                    !_isDescriptionExpanded;
-                              }),
-                              icon: Icon(
-                                _isDescriptionExpanded
-                                    ? Icons.expand_less
-                                    : Icons.expand_more,
-                              ),
-                            ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SelectableText(
-                                  task.title,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineMedium,
-                                ),
-                                if (task.description.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Theme(
-                                    key: const ValueKey('task-description'),
-                                    data: markdownTheme,
-                                    child: ClipRect(
-                                      child:
-                                          canExpand && !_isDescriptionExpanded
-                                          ? SizedBox(
-                                              height:
-                                                  collapsedDescriptionHeight,
-                                              child: OverflowBox(
-                                                alignment: Alignment.topLeft,
-                                                minHeight: 0,
-                                                maxHeight: double.infinity,
-                                                child: descriptionMarkdown(),
-                                              ),
-                                            )
-                                          : descriptionMarkdown(),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                  child: SelectableText(
+                    task.title,
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -510,164 +414,288 @@ class _TaskDetailsState extends State<_TaskDetails> {
                 ),
               ],
             ),
-          const SizedBox(height: 28),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _MetricTile(
-                label: 'Total',
-                value: formatDuration(controller.totalForTasks(taskIds)),
-                icon: Icons.timelapse_rounded,
-              ),
-              _MetricTile(
-                label: 'Entries',
-                value: entries.length.toString(),
-                icon: Icons.format_list_bulleted_rounded,
-              ),
-              _MetricTile(
-                label: 'Status',
-                value: commonStatus?.label ?? 'Mixed',
-                icon: commonStatus == null
-                    ? Icons.rule_rounded
-                    : taskStatusIcon(commonStatus),
-                iconColor: commonStatus == null
-                    ? colorScheme.onSurfaceVariant
-                    : taskStatusColor(commonStatus),
-              ),
-              _MetricTile(
-                label: isMultiple ? 'Tasks' : 'Archive',
-                value: isMultiple
-                    ? tasks.length.toString()
-                    : task.isArchived
-                    ? 'Archived'
-                    : 'Current',
-                icon: isMultiple
-                    ? Icons.checklist_rounded
-                    : task.isArchived
-                    ? Icons.archive_outlined
-                    : Icons.inventory_2_outlined,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              if (!isMultiple)
-                FilledButton.icon(
-                  onPressed: isRunning
-                      ? controller.stopTimer
-                      : () => controller.startTimer(task.id),
-                  icon: Icon(
-                    isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                  ),
-                  label: Text(isRunning ? 'Stop timer' : 'Start timer'),
-                ),
-              MenuAnchor(
-                builder: (context, menuController, child) {
-                  return OutlinedButton.icon(
-                    onPressed: menuController.isOpen
-                        ? menuController.close
-                        : menuController.open,
-                    icon: Icon(
-                      commonStatus == null
-                          ? Icons.rule_rounded
-                          : taskStatusIcon(commonStatus),
-                      color: commonStatus == null
-                          ? colorScheme.onSurfaceVariant
-                          : taskStatusColor(commonStatus),
-                    ),
-                    label: Text(isMultiple ? 'Set status' : task.status.label),
-                  );
-                },
-                menuChildren: TaskStatus.values.map((status) {
-                  return MenuItemButton(
-                    leadingIcon: Icon(
-                      taskStatusIcon(status),
-                      color: taskStatusColor(status),
-                    ),
-                    onPressed: () =>
-                        controller.changeTasksStatus(taskIds, status),
-                    child: Text(status.label),
-                  );
-                }).toList(),
-              ),
-              FilledButton.tonalIcon(
-                onPressed:
-                    tasks.every(
-                      (selectedTask) =>
-                          selectedTask.status == TaskStatus.completed,
-                    )
-                    ? null
-                    : () => controller.completeTasks(taskIds),
-                icon: const Icon(Icons.check_rounded),
-                label: const Text('Complete'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => allArchived
-                    ? controller.unarchiveTasks(taskIds)
-                    : controller.archiveTasks(taskIds),
-                icon: Icon(
-                  allArchived
-                      ? Icons.unarchive_outlined
-                      : Icons.archive_outlined,
-                ),
-                label: Text(allArchived ? 'Unarchive' : 'Archive'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 28),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Time entries',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              if (!isMultiple)
-                OutlinedButton.icon(
-                  onPressed: () => _showTimeEntryDialog(
-                    context,
-                    controller,
-                    taskId: task.id,
-                  ),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Add entry'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Expanded(
-            child: entries.isEmpty
-                ? Center(
-                    child: Text(
-                      'No saved time entries',
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+            child: Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                key: const ValueKey('task-details-scroll-view'),
+                controller: _scrollController,
+                padding: const EdgeInsets.only(right: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isMultiple && task.description.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _TaskDescription(
+                        description: task.description,
+                        isExpanded: _isDescriptionExpanded,
+                        onToggleExpanded: () => setState(() {
+                          _isDescriptionExpanded = !_isDescriptionExpanded;
+                        }),
+                      ),
+                    ],
+                    const SizedBox(height: 28),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _MetricTile(
+                          label: 'Total',
+                          value: formatDuration(
+                            controller.totalForTasks(taskIds),
+                          ),
+                          icon: Icons.timelapse_rounded,
+                        ),
+                        _MetricTile(
+                          label: 'Entries',
+                          value: entries.length.toString(),
+                          icon: Icons.format_list_bulleted_rounded,
+                        ),
+                        _MetricTile(
+                          label: 'Status',
+                          value: commonStatus?.label ?? 'Mixed',
+                          icon: commonStatus == null
+                              ? Icons.rule_rounded
+                              : taskStatusIcon(commonStatus),
+                          iconColor: commonStatus == null
+                              ? colorScheme.onSurfaceVariant
+                              : taskStatusColor(commonStatus),
+                        ),
+                        _MetricTile(
+                          label: isMultiple ? 'Tasks' : 'Archive',
+                          value: isMultiple
+                              ? tasks.length.toString()
+                              : task.isArchived
+                              ? 'Archived'
+                              : 'Current',
+                          icon: isMultiple
+                              ? Icons.checklist_rounded
+                              : task.isArchived
+                              ? Icons.archive_outlined
+                              : Icons.inventory_2_outlined,
+                        ),
+                      ],
                     ),
-                  )
-                : _TimeEntryGroups(
-                    selectionKey: taskIds.join(','),
-                    entries: entries,
-                    taskNamesById: {
-                      for (final selectedTask in tasks)
-                        selectedTask.id: selectedTask.title,
-                    },
-                    showTaskNames: isMultiple,
-                    onEdit: (entry) => _showTimeEntryDialog(
-                      context,
-                      controller,
-                      taskId: entry.taskId,
-                      existingEntry: entry,
+                    const SizedBox(height: 24),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        if (!isMultiple)
+                          FilledButton.icon(
+                            onPressed: isRunning
+                                ? controller.stopTimer
+                                : () => controller.startTimer(task.id),
+                            icon: Icon(
+                              isRunning
+                                  ? Icons.stop_rounded
+                                  : Icons.play_arrow_rounded,
+                            ),
+                            label: Text(
+                              isRunning ? 'Stop timer' : 'Start timer',
+                            ),
+                          ),
+                        MenuAnchor(
+                          builder: (context, menuController, child) {
+                            return OutlinedButton.icon(
+                              onPressed: menuController.isOpen
+                                  ? menuController.close
+                                  : menuController.open,
+                              icon: Icon(
+                                commonStatus == null
+                                    ? Icons.rule_rounded
+                                    : taskStatusIcon(commonStatus),
+                                color: commonStatus == null
+                                    ? colorScheme.onSurfaceVariant
+                                    : taskStatusColor(commonStatus),
+                              ),
+                              label: Text(
+                                isMultiple ? 'Set status' : task.status.label,
+                              ),
+                            );
+                          },
+                          menuChildren: TaskStatus.values.map((status) {
+                            return MenuItemButton(
+                              leadingIcon: Icon(
+                                taskStatusIcon(status),
+                                color: taskStatusColor(status),
+                              ),
+                              onPressed: () =>
+                                  controller.changeTasksStatus(taskIds, status),
+                              child: Text(status.label),
+                            );
+                          }).toList(),
+                        ),
+                        FilledButton.tonalIcon(
+                          onPressed:
+                              tasks.every(
+                                (selectedTask) =>
+                                    selectedTask.status == TaskStatus.completed,
+                              )
+                              ? null
+                              : () => controller.completeTasks(taskIds),
+                          icon: const Icon(Icons.check_rounded),
+                          label: const Text('Complete'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => allArchived
+                              ? controller.unarchiveTasks(taskIds)
+                              : controller.archiveTasks(taskIds),
+                          icon: Icon(
+                            allArchived
+                                ? Icons.unarchive_outlined
+                                : Icons.archive_outlined,
+                          ),
+                          label: Text(allArchived ? 'Unarchive' : 'Archive'),
+                        ),
+                      ],
                     ),
-                    onDelete: (entry) =>
-                        _confirmDeleteTimeEntry(context, controller, entry),
-                  ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Time entries',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        if (!isMultiple)
+                          OutlinedButton.icon(
+                            onPressed: () => _showTimeEntryDialog(
+                              context,
+                              controller,
+                              taskId: task.id,
+                            ),
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Add entry'),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (entries.isEmpty)
+                      Center(
+                        child: Text(
+                          'No saved time entries',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      )
+                    else
+                      _TimeEntryGroups(
+                        selectionKey: taskIds.join(','),
+                        entries: entries,
+                        taskNamesById: {
+                          for (final selectedTask in tasks)
+                            selectedTask.id: selectedTask.title,
+                        },
+                        showTaskNames: isMultiple,
+                        onEdit: (entry) => _showTimeEntryDialog(
+                          context,
+                          controller,
+                          taskId: entry.taskId,
+                          existingEntry: entry,
+                        ),
+                        onDelete: (entry) =>
+                            _confirmDeleteTimeEntry(context, controller, entry),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TaskDescription extends StatelessWidget {
+  const _TaskDescription({
+    required this.description,
+    required this.isExpanded,
+    required this.onToggleExpanded,
+  });
+
+  final String description;
+  final bool isExpanded;
+  final VoidCallback onToggleExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final theme = Theme.of(context);
+        final descriptionStyle = theme.textTheme.bodyLarge?.copyWith(
+          fontFamily: _monospaceFontFamily,
+          fontFamilyFallback: _monospaceFontFamilyFallback,
+        );
+        final markdownTheme = theme.copyWith(
+          textTheme: theme.textTheme.apply(
+            fontFamily: _monospaceFontFamily,
+            fontFamilyFallback: _monospaceFontFamilyFallback,
+          ),
+        );
+        final descriptionPainter = TextPainter(
+          text: TextSpan(text: description, style: descriptionStyle),
+          maxLines: 3,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final collapsedDescriptionHeight =
+            descriptionPainter.preferredLineHeight * 3;
+        final canExpand = descriptionPainter.didExceedMaxLines;
+        descriptionPainter.dispose();
+        final markdownStyleSheet = MarkdownStyleSheet.fromTheme(markdownTheme);
+        final descriptionMarkdown = MarkdownBody(
+          data: description,
+          selectable: true,
+          softLineBreak: true,
+          styleSheet: markdownStyleSheet.copyWith(
+            p: descriptionStyle,
+            code: markdownStyleSheet.code?.copyWith(
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              fontSize: descriptionStyle?.fontSize,
+              height: descriptionStyle?.height,
+              fontFamily: _monospaceFontFamily,
+              fontFamilyFallback: _monospaceFontFamilyFallback,
+            ),
+          ),
+          builders: {'pre': _FencedCodeBuilder(theme.colorScheme)},
+        );
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (canExpand)
+              IconButton(
+                tooltip: isExpanded
+                    ? 'Collapse description'
+                    : 'Expand description',
+                onPressed: onToggleExpanded,
+                icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+              ),
+            Expanded(
+              child: Theme(
+                key: const ValueKey('task-description'),
+                data: markdownTheme,
+                child: ClipRect(
+                  child: canExpand && !isExpanded
+                      ? SizedBox(
+                          height: collapsedDescriptionHeight,
+                          child: OverflowBox(
+                            alignment: Alignment.topLeft,
+                            minHeight: 0,
+                            maxHeight: double.infinity,
+                            child: descriptionMarkdown,
+                          ),
+                        )
+                      : descriptionMarkdown,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -779,10 +807,8 @@ class _TimeEntryGroups extends StatelessWidget {
     final groups = _groupTimeEntries(entries);
     final today = DateTime.now();
 
-    return ListView.builder(
-      itemCount: groups.length,
-      itemBuilder: (context, index) {
-        final group = groups[index];
+    return Column(
+      children: groups.map((group) {
         return ExpansionTile(
           key: PageStorageKey('$selectionKey:${group.date.toIso8601String()}'),
           initiallyExpanded: _isSameDate(group.date, today),
@@ -811,7 +837,7 @@ class _TimeEntryGroups extends StatelessWidget {
             );
           }).toList(),
         );
-      },
+      }).toList(),
     );
   }
 }
