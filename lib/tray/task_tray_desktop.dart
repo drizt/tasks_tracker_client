@@ -8,6 +8,17 @@ import '../state/task_controller.dart';
 
 const _exitMenuKey = 'exit';
 
+@visibleForTesting
+String taskTrayIconPath({required bool isActive, required bool isWindows}) {
+  if (isWindows) {
+    return isActive
+        ? 'windows/runner/resources/tray_icon_active.ico'
+        : 'windows/runner/resources/tray_icon.ico';
+  }
+
+  return isActive ? 'assets/tray_icon_active.png' : 'assets/tray_icon.png';
+}
+
 TaskTray createTaskTray({
   void Function()? exitApplication,
   Future<void> Function()? toggleAppWindow,
@@ -175,9 +186,11 @@ class TaskTray {
     return Platform.isLinux || Platform.isMacOS || Platform.isWindows;
   }
 
-  String get _iconPath => 'assets/app_icon.png';
+  String get _iconPath =>
+      taskTrayIconPath(isActive: false, isWindows: Platform.isWindows);
 
-  String get _activeIconPath => 'assets/app_icon_active.png';
+  String get _activeIconPath =>
+      taskTrayIconPath(isActive: true, isWindows: Platform.isWindows);
 
   void attach(TaskController? controller) {
     if (identical(_controller, controller)) {
