@@ -12,6 +12,41 @@ import 'package:tasks_tracker_client/utils/duration_format.dart';
 import 'package:tasks_tracker_client/widgets/task_card.dart';
 
 void main() {
+Comm  for (final minutes in [null, 0, 30]) {
+    testWidgets('Task time visibility with $minutes minutes recorded', (
+      tester,
+    ) async {
+      final controller = await _pumpApp(
+        tester,
+        _storeWithTask(
+          entries: [
+            if (minutes != null)
+              TimeEntry(
+                id: 'entry-1',
+                taskId: 'task-1',
+                startedAt: DateTime(2026, 11, 7, 10),
+                endedAt: DateTime(2026, 11, 7, 10, minutes),
+              ),
+          ],
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(TaskCard),
+          matching: find.text(formatDuration(Duration(minutes: minutes ?? 0))),
+        ),
+        minutes == null ? findsNothing : findsOneWidget,
+      );
+      expect(
+        find.text('Total'),
+        minutes == null ? findsNothing : findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      controller.dispose();
+    });
+  }
+
   testWidgets('Archive report copies the selected task day to clipboard', (
     tester,
   ) async {
