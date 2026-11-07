@@ -364,7 +364,7 @@ class TaskController extends ChangeNotifier {
       TimeEntry(id: entryId, taskId: taskId, startedAt: startedAt),
     ];
     final task = _taskById(taskId);
-    if (task?.status == TaskStatus.newTask) {
+    if (task != null && task.status != TaskStatus.active) {
       _tasks = _tasks
           .map(
             (task) => task.id == taskId
@@ -377,6 +377,8 @@ class TaskController extends ChangeNotifier {
           .toList();
     }
     await _save();
+    _filter = TaskListFilter.work;
+    _retainVisibleSelection();
     _startTicker();
     notifyListeners();
   }
