@@ -527,7 +527,7 @@ class _TaskDetailsState extends State<_TaskDetails> {
                             );
                           }).toList(),
                         ),
-                        FilledButton.tonalIcon(
+                        OutlinedButton.icon(
                           onPressed:
                               tasks.every(
                                 (selectedTask) =>
