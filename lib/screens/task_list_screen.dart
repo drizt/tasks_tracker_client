@@ -396,17 +396,12 @@ class _TaskDetailsState extends State<_TaskDetails> {
                       _showTaskDialog(context, controller, existingTask: task),
                   icon: const Icon(Icons.edit_outlined),
                 ),
-                IconButton(
-                  tooltip: task.isArchived ? 'Unarchive task' : 'Archive task',
-                  onPressed: () => task.isArchived
-                      ? controller.unarchiveTask(task.id)
-                      : controller.archiveTask(task.id),
-                  icon: Icon(
-                    task.isArchived
-                        ? Icons.unarchive_outlined
-                        : Icons.archive_outlined,
+                if (!task.isArchived)
+                  IconButton(
+                    tooltip: 'Archive task',
+                    onPressed: () => controller.archiveTask(task.id),
+                    icon: const Icon(Icons.archive_outlined),
                   ),
-                ),
                 IconButton(
                   tooltip: 'Delete task',
                   onPressed: () => _confirmDelete(context, controller, task),
@@ -538,17 +533,12 @@ class _TaskDetailsState extends State<_TaskDetails> {
                           icon: const Icon(Icons.check_rounded),
                           label: const Text('Complete'),
                         ),
-                        OutlinedButton.icon(
-                          onPressed: () => allArchived
-                              ? controller.unarchiveTasks(taskIds)
-                              : controller.archiveTasks(taskIds),
-                          icon: Icon(
-                            allArchived
-                                ? Icons.unarchive_outlined
-                                : Icons.archive_outlined,
+                        if (!allArchived)
+                          OutlinedButton.icon(
+                            onPressed: () => controller.archiveTasks(taskIds),
+                            icon: const Icon(Icons.archive_outlined),
+                            label: const Text('Archive'),
                           ),
-                          label: Text(allArchived ? 'Unarchive' : 'Archive'),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 28),
