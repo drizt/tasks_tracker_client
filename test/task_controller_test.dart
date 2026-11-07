@@ -281,6 +281,44 @@ void main() {
     },
   );
 
+  for (final status in TaskStatus.values) {
+    test('starting timer sets ${status.name} task to active', () async {
+      final repository = _MemoryTaskRepository(
+        TaskStore(
+          tasks: [_task('task-1', status: status)],
+          timeEntries: const [],
+        ),
+      );
+      final controller = TaskController(repository);
+      addTearDown(controller.dispose);
+
+      await controller.load();
+      controller.setFilter(switch (status) {
+        TaskStatus.newTask || TaskStatus.active => TaskListFilter.work,
+        TaskStatus.completed => TaskListFilter.completed,
+        TaskStatus.deferred => TaskListFilter.deferred,
+        TaskStatus.canceled => TaskListFilter.canceled,
+      });
+      await controller.startTimer('task-1');
+
+      expect(controller.activeTaskId, 'task-1');
+      expect(controller.tasks.single.status, TaskStatus.active);
+      expect(controller.filter, TaskListFilter.work);
+      expect(controller.filteredTasks.single.id, 'task-1');
+      expect(controller.selectedTaskId, 'task-1');
+      final savedStore = repository.savedStore!;
+      expect(savedStore.tasks.single.status, TaskStatus.active);
+      expect(savedStore.timeEntries.single.taskId, 'task-1');
+      expect(savedStore.timeEntries.single.isRunning, isTrue);
+      if (status != TaskStatus.active) {
+        expect(
+          savedStore.tasks.single.updatedAt,
+          savedStore.timeEntries.single.startedAt,
+        );
+      }
+    });
+  }
+
   test('running timer creates and closes one open time entry', () async {
     final repository = _MemoryTaskRepository(
       TaskStore(
