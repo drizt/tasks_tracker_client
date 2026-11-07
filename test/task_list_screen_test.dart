@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart';
@@ -12,7 +13,7 @@ import 'package:tasks_tracker_client/utils/duration_format.dart';
 import 'package:tasks_tracker_client/widgets/task_card.dart';
 
 void main() {
-Comm  for (final minutes in [null, 0, 30]) {
+  for (final minutes in [null, 0, 30]) {
     testWidgets('Task time visibility with $minutes minutes recorded', (
       tester,
     ) async {
@@ -281,23 +282,29 @@ Comm  for (final minutes in [null, 0, 30]) {
 
     final dialog = find.byType(Dialog);
     final initialTopLeft = tester.getTopLeft(dialog);
-    final initialSize = tester.getSize(dialog);
 
-    await tester.drag(
-      find.byKey(const ValueKey('task-dialog-title-bar')),
-      const Offset(100, 60),
+    final moveGesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('task-dialog-title-bar'))),
     );
-    await tester.pump();
+    // Start the pan before measuring the dialog's movement.
+    await moveGesture.moveBy(const Offset(kPanSlop + 1, 0));
+    await moveGesture.moveBy(const Offset(100, 60));
+    await moveGesture.up();
+    await tester.pumpAndSettle();
 
     expect(tester.getTopLeft(dialog), initialTopLeft + const Offset(100, 60));
 
-    await tester.drag(
-      find.byKey(const ValueKey('task-dialog-resize-handle')),
-      const Offset(80, 50),
+    final resizeGesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('task-dialog-resize-handle'))),
     );
+    await resizeGesture.moveBy(const Offset(kPanSlop + 1, 0));
     await tester.pump();
+    final resizeStartSize = tester.getSize(dialog);
+    await resizeGesture.moveBy(const Offset(80, 50));
+    await resizeGesture.up();
+    await tester.pumpAndSettle();
 
-    expect(tester.getSize(dialog), initialSize + const Offset(80, 50));
+    expect(tester.getSize(dialog), resizeStartSize + const Offset(80, 50));
     expect(tester.takeException(), isNull);
 
     controller.dispose();
@@ -316,8 +323,9 @@ Comm  for (final minutes in [null, 0, 30]) {
     final initialSize = tester.getSize(dialog);
 
     await tester.tap(titleBar);
+    await tester.pump(kDoubleTapMinTime);
     await tester.tap(titleBar);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(tester.getTopLeft(dialog), const Offset(24, 24));
     expect(tester.getSize(dialog).width, greaterThan(initialSize.width));
