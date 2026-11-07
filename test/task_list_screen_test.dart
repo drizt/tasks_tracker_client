@@ -12,6 +12,122 @@ import 'package:tasks_tracker_client/utils/duration_format.dart';
 import 'package:tasks_tracker_client/widgets/task_card.dart';
 
 void main() {
+  testWidgets('Archive report copies the selected task day to clipboard', (
+    tester,
+  ) async {
+    String? clipboardText;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          clipboardText = (call.arguments as Map)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final task = _taskForWidgetTest(
+      'task-1',
+      'Tracked task',
+    ).copyWith(isArchived: true, archivedAt: DateTime(2026, 11, 7));
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [task],
+        timeEntries: [
+          TimeEntry(
+            id: 'entry-1',
+            taskId: task.id,
+            startedAt: DateTime(2026, 11, 6, 10),
+            endedAt: DateTime(2026, 11, 6, 10, 25),
+          ),
+        ],
+      ),
+    );
+    expect(find.widgetWithText(OutlinedButton, 'Report'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Archive'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Report'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardText, '#сделано\n* Tracked task - 30 мин.\n\n30 мин.');
+    expect(find.text('Report copied'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    controller.dispose();
+  });
+
+  testWidgets('Archive report copies untimed tasks using their archive date', (
+    tester,
+  ) async {
+    String? clipboardText;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          clipboardText = (call.arguments as Map)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'Chromium 157.0.8103.39').copyWith(
+            isArchived: true,
+            archivedAt: DateTime(2026, 11, 7, 4, 59),
+          ),
+        ],
+        timeEntries: const [],
+      ),
+    );
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Archive'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Report'));
+    await tester.pumpAndSettle();
+    expect(
+      clipboardText,
+      '#сделано\n* Chromium 157.0.8103.39\n\n0 мин. + Chromium 157.0.8103.39',
+    );
+    expect(tester.takeException(), isNull);
+    controller.dispose();
+  });
+
+  testWidgets('Archive report is disabled without entries or archive date', (
+    tester,
+  ) async {
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'Archived').copyWith(isArchived: true),
+        ],
+        timeEntries: const [],
+      ),
+    );
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Archive'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Report'))
+          .onPressed,
+      isNull,
+    );
+    controller.dispose();
+  });
+
   testWidgets('adds a task from the sidebar', (tester) async {
     final controller = await _pumpApp(
       tester,
