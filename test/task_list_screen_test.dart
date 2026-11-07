@@ -89,7 +89,9 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('archives and unarchives selected task', (tester) async {
+  testWidgets('archives selected task without showing unarchive buttons', (
+    tester,
+  ) async {
     final controller = await _pumpApp(tester, _storeWithTask());
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Archive'));
@@ -97,15 +99,11 @@ void main() {
 
     expect(controller.tasks.single.isArchived, isTrue);
     expect(controller.filter, TaskListFilter.work);
-    expect(find.widgetWithText(OutlinedButton, 'Unarchive'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Unarchive'));
-    await tester.pumpAndSettle();
-
     expect(tester.takeException(), isNull);
-    expect(controller.tasks.single.isArchived, isFalse);
-    expect(controller.tasks.single.status, TaskStatus.newTask);
-    expect(controller.filter, TaskListFilter.work);
+    expect(find.widgetWithText(OutlinedButton, 'Unarchive'), findsNothing);
+    expect(find.byTooltip('Unarchive task'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Archive'), findsNothing);
+    expect(find.byTooltip('Archive task'), findsNothing);
 
     controller.dispose();
   });
@@ -459,14 +457,8 @@ final plain = 1;
       controller.tasks.map((task) => task.isArchived),
       everyElement(isTrue),
     );
-    expect(find.widgetWithText(OutlinedButton, 'Unarchive'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Unarchive'));
-    await tester.pumpAndSettle();
-    expect(
-      controller.tasks.map((task) => task.isArchived),
-      everyElement(isFalse),
-    );
+    expect(find.widgetWithText(OutlinedButton, 'Unarchive'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Archive'), findsNothing);
 
     controller.dispose();
   });
