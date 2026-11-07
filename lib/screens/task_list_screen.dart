@@ -283,6 +283,9 @@ class _TaskSidebarState extends State<_TaskSidebar> {
                       return TaskCard(
                         task: task,
                         total: controller.totalForTask(task.id),
+                        hasTimeEntries: controller
+                            .entriesForTask(task.id)
+                            .isNotEmpty,
                         isSelected: controller.selectedTaskIds.contains(
                           task.id,
                         ),
@@ -452,13 +455,14 @@ class _TaskDetailsState extends State<_TaskDetails> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _MetricTile(
-                          label: 'Total',
-                          value: formatDuration(
-                            controller.totalForTasks(taskIds),
+                        if (entries.isNotEmpty)
+                          _MetricTile(
+                            label: 'Total',
+                            value: formatDuration(
+                              controller.totalForTasks(taskIds),
+                            ),
+                            icon: Icons.timelapse_rounded,
                           ),
-                          icon: Icons.timelapse_rounded,
-                        ),
                         _MetricTile(
                           label: 'Entries',
                           value: entries.length.toString(),

@@ -8,6 +8,7 @@ class TaskCard extends StatelessWidget {
   const TaskCard({
     required this.task,
     required this.total,
+    required this.hasTimeEntries,
     required this.isSelected,
     required this.isRunning,
     required this.onTap,
@@ -16,6 +17,7 @@ class TaskCard extends StatelessWidget {
 
   final Task task;
   final Duration total;
+  final bool hasTimeEntries;
   final bool isSelected;
   final bool isRunning;
   final VoidCallback onTap;
@@ -73,17 +75,19 @@ class TaskCard extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(width: 10),
-              Text(
-                formatDuration(total),
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: isRunning
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  fontWeight: isRunning ? FontWeight.w700 : FontWeight.w500,
+              if (hasTimeEntries) ...[
+                const SizedBox(width: 10),
+                Text(
+                  formatDuration(total),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: isRunning
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    fontWeight: isRunning ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
