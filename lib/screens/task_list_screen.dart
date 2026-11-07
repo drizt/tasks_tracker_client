@@ -7,6 +7,7 @@ import 'package:markdown/markdown.dart' as md;
 import '../models/task.dart';
 import '../models/time_entry.dart';
 import '../state/task_controller.dart';
+import '../utils/archive_report.dart';
 import '../utils/duration_format.dart';
 import '../utils/task_status_style.dart';
 import '../widgets/active_timer_bar.dart';
@@ -343,6 +344,22 @@ class _TaskDetailsState extends State<_TaskDetails> {
   bool _isDescriptionExpanded = false;
   final ScrollController _scrollController = ScrollController();
 
+  Future<void> _copyReport(BuildContext context) async {
+    final controller = widget.controller;
+    final report = generateArchiveReport(
+      selectedTask: controller.selectedTask!,
+      tasks: controller.tasks,
+      entries: controller.timeEntries,
+    );
+    await Clipboard.setData(ClipboardData(text: report));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Report copied')));
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -533,6 +550,19 @@ class _TaskDetailsState extends State<_TaskDetails> {
                           icon: const Icon(Icons.check_rounded),
                           label: const Text('Complete'),
                         ),
+                        if (controller.filter == TaskListFilter.archive)
+                          OutlinedButton.icon(
+                            onPressed:
+                                archiveReportEnd(
+                                      task,
+                                      controller.timeEntries,
+                                    ) ==
+                                    null
+                                ? null
+                                : () => _copyReport(context),
+                            icon: const Icon(Icons.copy_rounded),
+                            label: const Text('Report'),
+                          ),
                         if (!allArchived)
                           OutlinedButton.icon(
                             onPressed: () => controller.archiveTasks(taskIds),
