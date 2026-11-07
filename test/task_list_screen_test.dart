@@ -79,7 +79,7 @@ void main() {
   testWidgets('completes selected task from dedicated button', (tester) async {
     final controller = await _pumpApp(tester, _storeWithTask());
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Complete'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Complete'));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -442,11 +442,11 @@ final plain = 1;
     expect(find.text('30:00  First task'), findsOneWidget);
     expect(find.text('1:00:00  Second task'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Set status'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Complete'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Complete'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Archive'), findsOneWidget);
     expect(find.text('Add entry'), findsNothing);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Complete'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Complete'));
     await tester.pumpAndSettle();
     expect(
       controller.tasks.map((task) => task.status),
