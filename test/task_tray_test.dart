@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tasks_tracker_client/data/task_repository.dart';
@@ -29,6 +31,12 @@ void main() {
   test(
     'keeps tray icon shown and marks it active while a timer runs',
     () async {
+      final idleIcon = Platform.isWindows
+          ? 'windows/runner/resources/tray_icon.ico'
+          : 'assets/tray_icon.png';
+      final activeIcon = Platform.isWindows
+          ? 'windows/runner/resources/tray_icon_active.ico'
+          : 'assets/tray_icon_active.png';
       final host = _FakeTaskTrayHost();
       final controller = TaskController(
         _MemoryTaskRepository(
@@ -50,24 +58,24 @@ void main() {
       final tray = TaskTray(host: host);
 
       await tray.idle;
-      expect(host.icons, ['assets/tray_icon.png']);
+      expect(host.icons, [idleIcon]);
       expect(host.menu.map((item) => item.label), ['Exit']);
 
       tray.attach(controller);
       await controller.load();
       await tray.idle;
 
-      expect(host.icons, ['assets/tray_icon.png']);
+      expect(host.icons, [idleIcon]);
 
       await controller.startTimer('task-1');
       await tray.idle;
 
-      expect(host.icons.last, 'assets/tray_icon_active.png');
+      expect(host.icons.last, activeIcon);
 
       await controller.stopTimer();
       await tray.idle;
 
-      expect(host.icons.last, 'assets/tray_icon.png');
+      expect(host.icons.last, idleIcon);
       expect(host.destroyCount, 0);
 
       await tray.dispose();
