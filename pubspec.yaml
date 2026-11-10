@@ -1,10 +1,10 @@
 name: tasks_tracker_client
 description: "Tasks Tracker personal client application."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ^3.12.1
+  sdk: ^3.13.0
 
 dependencies:
   flutter:
@@ -13,8 +13,8 @@ dependencies:
   highlight: ^0.7.0
   json_rpc_2: ^4.1.0
   markdown: ^7.3.1
-  nativeapi:
-    path: third_party/nativeapi-flutter/packages/nativeapi
+  nativeapi: ^0.5.10
+  nativeapi_flutter: ^0.5.10
   smart_date_formatter: ^2.4.0
   ulid: ^2.0.1
   web_socket_channel: ^3.0.3
@@ -24,10 +24,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-
-dependency_overrides:
-  cnativeapi:
-    path: third_party/nativeapi-flutter/packages/cnativeapi
 
 flutter:
   uses-material-design: true

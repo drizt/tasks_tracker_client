@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:nativeapi/nativeapi.dart' as native;
+import 'package:nativeapi_flutter/nativeapi_flutter.dart' show ImageAsset;
 
 import '../state/task_controller.dart';
 
@@ -68,7 +69,8 @@ TaskTrayHost createSystemTaskTrayHost() {
 class NativeApiTaskTrayHost implements TaskTrayHost {
   NativeApiTaskTrayHost();
 
-  final native.TrayIcon _trayIcon = native.TrayIcon();
+  final native.TrayIcon _trayIcon =
+      native.TrayIcon.create() ?? (throw StateError('Cannot create tray icon'));
   final List<native.Image> _images = [];
   final List<native.MenuItem> _menuItems = [];
   // Keep the native menu wrapper alive while the tray icon references it.
@@ -83,13 +85,18 @@ class NativeApiTaskTrayHost implements TaskTrayHost {
     required void Function(String key) onMenuItemClick,
   }) {
     _onMenuItemClick = onMenuItemClick;
-    _trayIcon.on<native.TrayIconClickedEvent>((_) => onClick());
-    _trayIcon.on<native.TrayIconRightClickedEvent>((_) => onRightClick());
+    _trayIcon.addListener((event) {
+      if (event is native.TrayIconClickedEvent) {
+        onClick();
+      } else if (event is native.TrayIconRightClickedEvent) {
+        onRightClick();
+      }
+    });
   }
 
   @override
   Future<void> destroy() async {
-    _trayIcon.isVisible = false;
+    _trayIcon.setVisible(false);
     _trayIcon.dispose();
     for (final image in _images) {
       image.dispose();
@@ -106,7 +113,8 @@ class NativeApiTaskTrayHost implements TaskTrayHost {
   Future<void> setContextMenu(List<TaskTrayMenuItem> items) async {
     _menuItems.clear();
 
-    final menu = native.Menu();
+    final menu =
+        native.Menu.create() ?? (throw StateError('Cannot create tray menu'));
     for (final item in items) {
       if (item.isSeparator) {
         menu.addSeparator();
@@ -119,37 +127,44 @@ class NativeApiTaskTrayHost implements TaskTrayHost {
         continue;
       }
 
-      final menuItem = native.MenuItem(label);
-      menuItem.on<native.MenuItemClickedEvent>(
-        (_) => _onMenuItemClick?.call(key),
-      );
+      final menuItem =
+          native.MenuItem.createWithLabelAndType(
+            label,
+            native.MenuItemType.normal,
+          ) ??
+          (throw StateError('Cannot create tray menu item'));
+      menuItem.addListener((event) {
+        if (event is native.MenuItemClickedEvent) {
+          _onMenuItemClick?.call(key);
+        }
+      });
       menu.addItem(menuItem);
       _menuItems.add(menuItem);
     }
 
     _menu = menu;
-    _trayIcon.contextMenu = menu;
-    _trayIcon.contextMenuTrigger = native.ContextMenuTrigger.rightClicked;
-    _trayIcon.isVisible = true;
+    _trayIcon.setContextMenu(menu);
+    _trayIcon.setContextMenuTrigger(native.ContextMenuTrigger.rightClicked);
+    _trayIcon.setVisible(true);
   }
 
   @override
   Future<void> setIcon(String iconPath) async {
-    final image = native.Image.fromAsset(iconPath);
+    final image = ImageAsset.fromAsset(iconPath);
     if (image == null) {
       return;
     }
 
     _images.add(image);
     _trayIcon.icon = image;
-    _trayIcon.isVisible = true;
+    _trayIcon.setVisible(true);
   }
 
   @override
   Future<void> setToolTip(String toolTip) async {
-    _trayIcon.title = toolTip;
-    _trayIcon.tooltip = toolTip;
-    _trayIcon.isVisible = true;
+    _trayIcon.setTitle(toolTip);
+    _trayIcon.setTooltip(toolTip);
+    _trayIcon.setVisible(true);
   }
 }
 
