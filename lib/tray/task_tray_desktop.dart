@@ -270,8 +270,17 @@ class TaskTray {
   void _handleMenuItemClick(String key) {
     switch (key) {
       case _exitMenuKey:
-        _exitApplication();
+        unawaited(_exit());
     }
+  }
+
+  Future<void> _exit() async {
+    if (_isDisposed) {
+      return;
+    }
+
+    await dispose();
+    _exitApplication();
   }
 
   List<TaskTrayMenuItem> get _menuItems {

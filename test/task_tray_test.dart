@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -112,21 +113,34 @@ void main() {
     await tray.dispose();
   });
 
-  test('exit tray menu item invokes exit callback', () async {
-    var didExit = false;
+  test('exit waits for tray cleanup and ignores repeated clicks', () async {
+    var exitCount = 0;
+    final exited = Completer<void>();
+    final cleanup = Completer<void>();
     final host = _FakeTaskTrayHost();
+    host.destroyBarrier = cleanup.future;
     final tray = TaskTray(
       host: host,
       exitApplication: () {
-        didExit = true;
+        exitCount += 1;
+        exited.complete();
       },
     );
 
+    await tray.idle;
     host.choose('exit');
+    host.choose('exit');
+    await Future<void>.delayed(Duration.zero);
 
-    expect(didExit, isTrue);
+    expect(host.destroyCount, 1);
+    expect(exitCount, 0);
+
+    cleanup.complete();
+    await exited.future;
+    expect(exitCount, 1);
 
     await tray.dispose();
+    expect(host.destroyCount, 1);
   });
 }
 
@@ -134,6 +148,7 @@ class _FakeTaskTrayHost implements TaskTrayHost {
   final List<String> icons = [];
   List<TaskTrayMenuItem> menu = [];
   int destroyCount = 0;
+  Future<void>? destroyBarrier;
   int openContextMenuCount = 0;
   VoidCallback? _onClick;
   VoidCallback? _onRightClick;
@@ -165,6 +180,7 @@ class _FakeTaskTrayHost implements TaskTrayHost {
   @override
   Future<void> destroy() async {
     destroyCount += 1;
+    await destroyBarrier;
   }
 
   @override
