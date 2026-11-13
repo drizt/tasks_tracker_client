@@ -20,27 +20,30 @@ DateTime? archiveReportEnd(Task task, Iterable<TimeEntry> entries) {
 }
 
 // A workday runs from 05:00 local time until 05:00 the following morning.
-DateTime _workday(DateTime timestamp) {
+DateTime archiveDayStart(DateTime timestamp) {
   final local = timestamp.toLocal();
   return DateTime(
     local.year,
     local.month,
     local.day - (local.hour < 5 ? 1 : 0),
+    5,
   );
 }
 
-String generateArchiveReport({
-  required Task selectedTask,
-  required List<Task> tasks,
-  required List<TimeEntry> entries,
-}) {
-  final selectedEnd = archiveReportEnd(selectedTask, entries);
-  if (!selectedTask.isArchived || selectedEnd == null) {
-    return '';
-  }
+DateTime archiveWeekStart(DateTime timestamp) {
+  final day = archiveDayStart(timestamp);
+  return DateTime(
+    day.year,
+    day.month,
+    day.day - (day.weekday - DateTime.monday),
+    5,
+  );
+}
 
-  final day = _workday(selectedEnd);
-  final weekStart = DateTime(day.year, day.month, day.day - 6);
+List<_ReportTask> _archiveReportTasks(
+  List<Task> tasks,
+  List<TimeEntry> entries,
+) {
   final reportTasks = <_ReportTask>[];
   for (final task in tasks) {
     if (!task.isArchived) {
@@ -50,7 +53,7 @@ String generateArchiveReport({
     if (end == null) {
       continue;
     }
-    final taskDay = _workday(end);
+    final taskDay = archiveDayStart(end);
     final taskEntries = entries
         .where((entry) => entry.taskId == task.id)
         .toList();
@@ -68,6 +71,56 @@ String generateArchiveReport({
     final byEnd = first.end.compareTo(second.end);
     return byEnd != 0 ? byEnd : first.task.id.compareTo(second.task.id);
   });
+  return reportTasks;
+}
+
+int _totalMinutes(Iterable<_ReportTask> tasks) =>
+    tasks.fold(0, (total, item) => total + (item.minutes ?? 0));
+
+({Duration day, Duration week, Duration total}) archiveTimeTotals({
+  required List<Task> tasks,
+  required List<TimeEntry> entries,
+  required DateTime now,
+  Iterable<String>? selectedTaskIds,
+}) {
+  final day = archiveDayStart(now);
+  final weekStart = archiveWeekStart(now);
+  final reportTasks = _archiveReportTasks(tasks, entries);
+  final selectedIds = selectedTaskIds?.toSet();
+  return (
+    day: Duration(
+      minutes: _totalMinutes(reportTasks.where((item) => item.day == day)),
+    ),
+    week: Duration(
+      minutes: _totalMinutes(
+        reportTasks.where(
+          (item) => !item.day.isBefore(weekStart) && !item.day.isAfter(day),
+        ),
+      ),
+    ),
+    total: Duration(
+      minutes: _totalMinutes(
+        reportTasks.where(
+          (item) => selectedIds == null || selectedIds.contains(item.task.id),
+        ),
+      ),
+    ),
+  );
+}
+
+String generateArchiveReport({
+  required Task selectedTask,
+  required List<Task> tasks,
+  required List<TimeEntry> entries,
+}) {
+  final selectedEnd = archiveReportEnd(selectedTask, entries);
+  if (!selectedTask.isArchived || selectedEnd == null) {
+    return '';
+  }
+
+  final day = archiveDayStart(selectedEnd);
+  final weekStart = archiveWeekStart(selectedEnd);
+  final reportTasks = _archiveReportTasks(tasks, entries);
 
   String dayBody(DateTime date) {
     final dailyTasks = reportTasks.where((task) => task.day == date).toList();
@@ -103,7 +156,7 @@ String generateArchiveReport({
 }
 
 String _reportTotal(Iterable<_ReportTask> tasks) {
-  final total = tasks.fold(0, (total, item) => total + (item.minutes ?? 0));
+  final total = _totalMinutes(tasks);
   final names = tasks
       .where((item) => item.minutes == null)
       .map((item) => item.task.title);

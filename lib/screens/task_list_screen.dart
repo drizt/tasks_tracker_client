@@ -379,6 +379,22 @@ class _TaskDetailsState extends State<_TaskDetails> {
     final task = tasks.last;
     final taskIds = tasks.map((task) => task.id).toList();
     final entries = controller.entriesForTasks(taskIds);
+    final isArchive = controller.filter == TaskListFilter.archive;
+    final metricTaskIds = isArchive
+        ? controller.filteredTasks.map((task) => task.id).toList()
+        : taskIds;
+    final hasMetricEntries = isArchive
+        ? controller.timeEntries.any(
+            (entry) => metricTaskIds.contains(entry.taskId),
+          )
+        : entries.isNotEmpty;
+    final archiveTotals = isArchive
+        ? archiveTimeTotals(
+            tasks: controller.tasks,
+            entries: controller.timeEntries,
+            now: DateTime.now(),
+          )
+        : null;
     final isMultiple = tasks.length > 1;
     final isRunning = !isMultiple && controller.activeTaskId == task.id;
     final commonStatus =
@@ -454,17 +470,41 @@ class _TaskDetailsState extends State<_TaskDetails> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        if (entries.isNotEmpty)
+                        if (hasMetricEntries)
                           _MetricTile(
-                            label: 'Total',
-                            value: formatDuration(
-                              controller.totalForTasks(taskIds),
-                            ),
                             icon: Icons.timelapse_rounded,
+                            values: [
+                              if (isArchive) ...[
+                                (
+                                  label: 'Day',
+                                  value: formatDuration(
+                                    archiveTotals!.day,
+                                    showSeconds: false,
+                                  ),
+                                ),
+                                (
+                                  label: 'Week',
+                                  value: formatDuration(
+                                    archiveTotals.week,
+                                    showSeconds: false,
+                                  ),
+                                ),
+                              ],
+                              (
+                                label: 'Total',
+                                value: formatDuration(
+                                  controller.totalForTasks(taskIds),
+                                ),
+                              ),
+                            ],
                           ),
                         _MetricTile(
-                          label: 'Status',
-                          value: commonStatus?.label ?? 'Mixed',
+                          values: [
+                            (
+                              label: 'Status',
+                              value: commonStatus?.label ?? 'Mixed',
+                            ),
+                          ],
                           icon: commonStatus == null
                               ? Icons.rule_rounded
                               : taskStatusIcon(commonStatus),
@@ -473,12 +513,16 @@ class _TaskDetailsState extends State<_TaskDetails> {
                               : taskStatusColor(commonStatus),
                         ),
                         _MetricTile(
-                          label: isMultiple ? 'Tasks' : 'Archive',
-                          value: isMultiple
-                              ? tasks.length.toString()
-                              : task.isArchived
-                              ? 'Archived'
-                              : 'Current',
+                          values: [
+                            (
+                              label: isMultiple ? 'Tasks' : 'Archive',
+                              value: isMultiple
+                                  ? tasks.length.toString()
+                                  : task.isArchived
+                                  ? 'Archived'
+                                  : 'Current',
+                            ),
+                          ],
                           icon: isMultiple
                               ? Icons.checklist_rounded
                               : task.isArchived
@@ -967,23 +1011,21 @@ class _TimeEntryRow extends StatelessWidget {
 
 class _MetricTile extends StatelessWidget {
   const _MetricTile({
-    required this.label,
-    required this.value,
     required this.icon,
     this.iconColor,
+    this.values = const [],
   });
 
-  final String label;
-  final String value;
   final IconData icon;
   final Color? iconColor;
+  final List<({String label, String value})> values;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      width: 180,
+      width: values.length <= 1 ? 180 : 300,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
@@ -995,17 +1037,27 @@ class _MetricTile extends StatelessWidget {
           Icon(icon, color: iconColor ?? colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(label, style: Theme.of(context).textTheme.labelMedium),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                for (final metric in values)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          metric.label,
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          metric.value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

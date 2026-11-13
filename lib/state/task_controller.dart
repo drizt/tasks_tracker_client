@@ -469,11 +469,25 @@ class TaskController extends ChangeNotifier {
     return saved;
   }
 
-  Duration totalForTasks(Iterable<String> taskIds) {
+  Duration totalForTasks(
+    Iterable<String> taskIds, {
+    DateTime? from,
+    DateTime? until,
+  }) {
     final selectedIds = taskIds.toSet();
+    final now = DateTime.now();
     return _timeEntries
         .where((entry) => selectedIds.contains(entry.taskId))
-        .fold(Duration.zero, (total, entry) => total + entry.duration);
+        .fold(Duration.zero, (total, entry) {
+          final start = from != null && entry.startedAt.isBefore(from)
+              ? from
+              : entry.startedAt;
+          final entryEnd = entry.endedAt ?? now;
+          final end = until != null && entryEnd.isAfter(until)
+              ? until
+              : entryEnd;
+          return end.isAfter(start) ? total + end.difference(start) : total;
+        });
   }
 
   List<TimeEntry> entriesForTask(String taskId) {

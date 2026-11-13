@@ -1,12 +1,16 @@
 import 'package:smart_date_formatter/smart_date_formatter.dart';
 
-String formatDuration(Duration duration) {
+String formatDuration(Duration duration, {bool showSeconds = true}) {
   final totalSeconds = duration.inSeconds;
   final hours = totalSeconds ~/ 3600;
   final minutes = (totalSeconds % 3600) ~/ 60;
   final seconds = totalSeconds % 60;
 
   String twoDigits(int value) => value.toString().padLeft(2, '0');
+
+  if (!showSeconds) {
+    return '$hours:${twoDigits(minutes)}';
+  }
 
   if (hours > 0) {
     return '$hours:${twoDigits(minutes)}:${twoDigits(seconds)}';
