@@ -4,6 +4,31 @@ import 'package:tasks_tracker_client/models/time_entry.dart';
 import 'package:tasks_tracker_client/utils/archive_report.dart';
 
 void main() {
+  test('day starts at 05:00 local time, including month rollover', () {
+    expect(
+      archiveDayStart(DateTime(2026, 11, 1, 4, 59, 59)),
+      DateTime(2026, 10, 31, 5),
+    );
+    expect(archiveDayStart(DateTime(2026, 11, 1, 5)), DateTime(2026, 11, 1, 5));
+    final timestamp = DateTime(2026, 11, 1, 5).toUtc();
+    expect(archiveDayStart(timestamp), DateTime(2026, 11, 1, 5));
+  });
+
+  test('week starts Monday at 05:00 after the Sunday workday ends', () {
+    expect(
+      archiveWeekStart(DateTime(2026, 11, 9, 4, 59, 59)),
+      DateTime(2026, 11, 2, 5),
+    );
+    expect(
+      archiveWeekStart(DateTime(2026, 11, 9, 5)),
+      DateTime(2026, 11, 9, 5),
+    );
+    expect(
+      archiveWeekStart(DateTime(2026, 11, 15, 23, 59)),
+      DateTime(2026, 11, 9, 5),
+    );
+  });
+
   test('daily report matches the supplied format exactly', () {
     final titles = [
       'Фикс снятий Baltbet',
@@ -43,6 +68,23 @@ void main() {
       _entry(tasks[1], DateTime(2026, 11, 6, 11), 15),
       _entry(tasks[2], DateTime(2026, 11, 6, 12), 4),
     ];
+    final totals = archiveTimeTotals(
+      tasks: tasks,
+      entries: entries,
+      now: DateTime(2026, 11, 6, 15),
+    );
+    expect(totals.day, const Duration(minutes: 40));
+    expect(totals.week, const Duration(minutes: 40));
+    expect(totals.total, const Duration(minutes: 40));
+    final selectedTotals = archiveTimeTotals(
+      tasks: tasks,
+      entries: entries,
+      now: DateTime(2026, 11, 6, 15),
+      selectedTaskIds: [tasks.first.id, tasks.last.id],
+    );
+    expect(selectedTotals.day, totals.day);
+    expect(selectedTotals.week, totals.week);
+    expect(selectedTotals.total, const Duration(minutes: 20));
     expect(
       generateArchiveReport(
         selectedTask: tasks.first,
@@ -102,6 +144,14 @@ void main() {
         _entry(tasks[3], DateTime(2026, 11, 9, 4, 59), 30),
         _entry(tasks[4], DateTime(2026, 11, 9, 5), 60),
       ];
+      final totals = archiveTimeTotals(
+        tasks: tasks,
+        entries: entries,
+        now: DateTime(2026, 11, 9, 4, 59),
+      );
+      expect(totals.day, const Duration(minutes: 30));
+      expect(totals.week, const Duration(minutes: 110));
+      expect(totals.total, const Duration(minutes: 230));
       expect(
         generateArchiveReport(
           selectedTask: tasks[3],
@@ -118,9 +168,8 @@ void main() {
 
   test('uses archive time for untimed tasks and adds names to daily total', () {
     final timed = _task('Timed');
-    final untimed = _task(
-      'Chromium 157.0.8103.39',
-    ).copyWith(archivedAt: DateTime(2026, 11, 7, 4, 59));
+    final untimed = _task('Chromium 157.0.8103.39')
+        .copyWith(archivedAt: DateTime(2026, 11, 7, 4, 59));
     final tasks = [
       timed,
       untimed,
@@ -139,12 +188,10 @@ void main() {
 
   test('includes untimed names in each day and the weekly total', () {
     final timed = _task('Timed');
-    final monday = _task(
-      'Monday untimed',
-    ).copyWith(archivedAt: DateTime(2026, 11, 2, 12));
-    final sunday = _task(
-      'Chromium 157.0.8103.39',
-    ).copyWith(archivedAt: DateTime(2026, 11, 9, 4, 59));
+    final monday = _task('Monday untimed')
+        .copyWith(archivedAt: DateTime(2026, 11, 2, 12));
+    final sunday = _task('Chromium 157.0.8103.39')
+        .copyWith(archivedAt: DateTime(2026, 11, 9, 4, 59));
     final tasks = [
       timed,
       monday,

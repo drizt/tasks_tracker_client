@@ -6,6 +6,67 @@ import 'package:tasks_tracker_client/models/time_entry.dart';
 import 'package:tasks_tracker_client/state/task_controller.dart';
 
 void main() {
+  test(
+    'period totals clip entries at day and Monday week boundaries',
+    () async {
+      final controller = TaskController(
+        _MemoryTaskRepository(
+          TaskStore(
+            tasks: [_task('task-1'), _task('task-2')],
+            timeEntries: [
+              TimeEntry(
+                id: 'sunday-to-monday',
+                taskId: 'task-1',
+                startedAt: DateTime(2026, 11, 8, 23, 30),
+                endedAt: DateTime(2026, 11, 9, 0, 30),
+              ),
+              TimeEntry(
+                id: 'yesterday-to-today',
+                taskId: 'task-1',
+                startedAt: DateTime(2026, 11, 12, 23, 30),
+                endedAt: DateTime(2026, 11, 13, 0, 30),
+              ),
+              TimeEntry(
+                id: 'other-task',
+                taskId: 'task-2',
+                startedAt: DateTime(2026, 11, 13, 10),
+                endedAt: DateTime(2026, 11, 13, 11),
+              ),
+            ],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+      await controller.load();
+
+      expect(
+        controller.totalForTasks(
+          ['task-1'],
+          from: DateTime(2026, 11, 13),
+          until: DateTime(2026, 11, 13, 12),
+        ),
+        const Duration(minutes: 30),
+      );
+      expect(
+        controller.totalForTasks(
+          ['task-1'],
+          from: DateTime(2026, 11, 9),
+          until: DateTime(2026, 11, 13, 12),
+        ),
+        const Duration(minutes: 90),
+      );
+      expect(controller.totalForTasks(['task-1']), const Duration(hours: 2));
+      expect(
+        controller.totalForTasks(
+          ['task-1'],
+          from: DateTime(2026, 11, 13),
+          until: DateTime(2026, 11, 13, 0, 15),
+        ),
+        const Duration(minutes: 15),
+      );
+    },
+  );
+
   test('loads tasks and calculates saved time', () async {
     final repository = _MemoryTaskRepository(
       TaskStore(

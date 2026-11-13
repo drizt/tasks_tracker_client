@@ -2,6 +2,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tasks_tracker_client/utils/duration_format.dart';
 
 void main() {
+  test('formats minute precision without seconds', () {
+    expect(formatDuration(Duration.zero, showSeconds: false), '0:00');
+    expect(
+      formatDuration(
+        const Duration(minutes: 30, seconds: 45),
+        showSeconds: false,
+      ),
+      '0:30',
+    );
+    expect(
+      formatDuration(const Duration(hours: 12, minutes: 5), showSeconds: false),
+      '12:05',
+    );
+    expect(formatDuration(const Duration(seconds: 45)), '00:45');
+  });
+
   test('formats today and yesterday as calendar dates', () {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);

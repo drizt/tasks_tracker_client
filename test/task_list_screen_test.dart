@@ -9,10 +9,133 @@ import 'package:tasks_tracker_client/models/task.dart';
 import 'package:tasks_tracker_client/models/time_entry.dart';
 import 'package:tasks_tracker_client/screens/task_list_screen.dart';
 import 'package:tasks_tracker_client/state/task_controller.dart';
+import 'package:tasks_tracker_client/utils/archive_report.dart';
 import 'package:tasks_tracker_client/utils/duration_format.dart';
 import 'package:tasks_tracker_client/widgets/task_card.dart';
 
 void main() {
+  testWidgets('Archive time tile shows current day, Monday week, and total', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final day = archiveDayStart(now);
+    final monday = archiveWeekStart(now);
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(
+        tasks: [
+          _taskForWidgetTest('task-1', 'Archived').copyWith(isArchived: true),
+          _taskForWidgetTest(
+            'task-2',
+            'Another archive',
+          ).copyWith(isArchived: true),
+          _taskForWidgetTest(
+            'task-3',
+            'Untimed archive',
+          ).copyWith(isArchived: true),
+          _taskForWidgetTest('task-4', 'Current task'),
+        ],
+        timeEntries: [
+          TimeEntry(
+            id: 'previous-week',
+            taskId: 'task-1',
+            startedAt: monday.subtract(const Duration(hours: 1)),
+            endedAt: monday.subtract(const Duration(seconds: 1)),
+          ),
+          TimeEntry(
+            id: 'previous-day',
+            taskId: 'task-2',
+            startedAt: day.subtract(const Duration(minutes: 30)),
+            endedAt: day.subtract(const Duration(seconds: 1)),
+          ),
+          TimeEntry(
+            id: 'not-archived',
+            taskId: 'task-4',
+            startedAt: day.subtract(const Duration(hours: 3)),
+            endedAt: day,
+          ),
+        ],
+      ),
+    );
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Archive'));
+    controller.selectTask('task-1');
+    await tester.pumpAndSettle();
+
+    final tile = find
+        .ancestor(of: find.text('Day'), matching: find.byType(Container))
+        .first;
+    expect(
+      find.descendant(of: tile, matching: find.text('Week')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: tile, matching: find.text('Total')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('Day')).dy,
+      tester.getTopLeft(find.text('Week')).dy,
+    );
+    expect(
+      tester.getTopLeft(find.text('Week')).dy,
+      tester.getTopLeft(find.text('Total')).dy,
+    );
+    expect(
+      tester.getTopLeft(find.text('Day')).dx,
+      lessThan(tester.getTopLeft(find.text('Week')).dx),
+    );
+    expect(
+      tester.getTopLeft(find.text('Week')).dx,
+      lessThan(tester.getTopLeft(find.text('Total')).dx),
+    );
+    expect(
+      find.descendant(of: tile, matching: find.text('59:59')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: tile, matching: find.text('0:00')),
+      day.weekday == DateTime.monday ? findsNWidgets(2) : findsOneWidget,
+    );
+    if (day.weekday != DateTime.monday) {
+      expect(
+        find.descendant(of: tile, matching: find.text('0:30')),
+        findsOneWidget,
+      );
+    }
+    controller.selectTask('task-2', additive: true);
+    await tester.pumpAndSettle();
+    expect(find.text('1:29:58'), findsOneWidget);
+    expect(
+      tester
+          .getSize(
+            find
+                .ancestor(
+                  of: find.text('Day'),
+                  matching: find.byType(Container),
+                )
+                .first,
+          )
+          .width,
+      300,
+    );
+    controller.selectTask('task-3');
+    await tester.pumpAndSettle();
+    expect(find.text('Day'), findsOneWidget);
+    expect(find.text('Week'), findsOneWidget);
+    expect(find.text('1:29:58'), findsNothing);
+    expect(
+      find.descendant(
+        of: find
+            .ancestor(of: find.text('Total'), matching: find.byType(Column))
+            .first,
+        matching: find.text('00:00'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    controller.dispose();
+  });
+
   for (final minutes in [null, 0, 30]) {
     testWidgets('Task time visibility with $minutes minutes recorded', (
       tester,
