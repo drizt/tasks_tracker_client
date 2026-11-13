@@ -256,7 +256,12 @@ class TaskController extends ChangeNotifier {
         return task;
       }
 
-      return task.copyWith(status: status, updatedAt: now);
+      return task.copyWith(
+        status: status,
+        isArchived: false,
+        clearArchivedAt: true,
+        updatedAt: now,
+      );
     }).toList();
     await _save();
     if (selectedTasks.any((task) => !_matchesFilter(task))) {

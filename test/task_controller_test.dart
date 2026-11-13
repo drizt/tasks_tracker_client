@@ -201,6 +201,59 @@ void main() {
     );
   });
 
+  for (final status in TaskStatus.values) {
+    test('setting $status restores selected archived tasks', () async {
+      final archivedTask = _task(
+        'task-1',
+        status: status,
+      ).copyWith(isArchived: true, archivedAt: DateTime.utc(2026, 11, 7));
+      final repository = _MemoryTaskRepository(
+        TaskStore(
+          tasks: [
+            archivedTask,
+            archivedTask.copyWith(id: 'task-2'),
+            archivedTask.copyWith(id: 'unselected'),
+          ],
+          timeEntries: const [],
+        ),
+      );
+      final controller = TaskController(repository);
+      addTearDown(controller.dispose);
+
+      await controller.load();
+      controller.setFilter(TaskListFilter.archive);
+      controller.selectTask('task-1');
+      controller.selectTask('task-2', additive: true);
+      await controller.changeTasksStatus(controller.selectedTaskIds, status);
+
+      final expectedFilter = switch (status) {
+        TaskStatus.newTask || TaskStatus.active => TaskListFilter.work,
+        TaskStatus.completed => TaskListFilter.completed,
+        TaskStatus.deferred => TaskListFilter.deferred,
+        TaskStatus.canceled => TaskListFilter.canceled,
+      };
+      expect(controller.filter, expectedFilter);
+      expect(controller.selectedTaskIds, ['task-1', 'task-2']);
+      expect(controller.filteredTasks.map((task) => task.id), [
+        'task-1',
+        'task-2',
+      ]);
+      for (final task in repository.savedStore!.tasks.take(2)) {
+        expect(task.status, status);
+        expect(task.isArchived, isFalse);
+        expect(task.archivedAt, isNull);
+      }
+      expect(repository.savedStore!.tasks.last.isArchived, isTrue);
+      expect(
+        repository.savedStore!.tasks.last.archivedAt,
+        archivedTask.archivedAt,
+      );
+
+      controller.setFilter(TaskListFilter.archive);
+      expect(controller.filteredTasks.map((task) => task.id), ['unselected']);
+    });
+  }
+
   test('completes, archives, and unarchives all selected tasks', () async {
     final repository = _MemoryTaskRepository(
       TaskStore(

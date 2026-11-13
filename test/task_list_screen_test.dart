@@ -209,6 +209,38 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('setting status restores an archived task to Work', (
+    tester,
+  ) async {
+    final task = _taskForWidgetTest(
+      'task-1',
+      'Archived task',
+    ).copyWith(isArchived: true, archivedAt: DateTime(2026, 11, 7));
+    final controller = await _pumpApp(
+      tester,
+      TaskStore(tasks: [task], timeEntries: const []),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Archive'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, task.status.label));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(MenuItemButton, 'Active'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(controller.tasks.single.status, TaskStatus.active);
+    expect(controller.tasks.single.isArchived, isFalse);
+    expect(controller.tasks.single.archivedAt, isNull);
+    expect(controller.filter, TaskListFilter.work);
+    expect(find.widgetWithText(TaskCard, 'Archived task'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Archive'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TaskCard), findsNothing);
+  });
+
   testWidgets('filter chip width stays fixed when selection changes', (
     tester,
   ) async {
@@ -371,9 +403,9 @@ void main() {
       );
       expect(
         markdown.styleSheet?.code?.backgroundColor,
-        Theme.of(
-          tester.element(descriptionArea),
-        ).colorScheme.surfaceContainerHighest,
+        Theme.of(tester.element(descriptionArea))
+            .colorScheme
+            .surfaceContainerHighest,
       );
       expect(find.text('**Task** under test'), findsNothing);
       final renderedText = tester.widget<SelectableText>(
@@ -387,9 +419,8 @@ void main() {
           ),
         ),
       );
-      final taskSpan = _textSpans(
-        renderedText.textSpan!,
-      ).singleWhere((span) => span.text == 'Task');
+      final taskSpan = _textSpans(renderedText.textSpan!)
+          .singleWhere((span) => span.text == 'Task');
       expect(taskSpan.style?.fontWeight, FontWeight.bold);
       expect(find.byTooltip('Expand description'), findsNothing);
 
