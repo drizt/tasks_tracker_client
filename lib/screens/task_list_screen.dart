@@ -358,9 +358,8 @@ class _TaskDetailsState extends State<_TaskDetails> {
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Report copied')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Report copied')));
   }
 
   @override
@@ -463,11 +462,6 @@ class _TaskDetailsState extends State<_TaskDetails> {
                             ),
                             icon: Icons.timelapse_rounded,
                           ),
-                        _MetricTile(
-                          label: 'Entries',
-                          value: entries.length.toString(),
-                          icon: Icons.format_list_bulleted_rounded,
-                        ),
                         _MetricTile(
                           label: 'Status',
                           value: commonStatus?.label ?? 'Mixed',
@@ -580,7 +574,7 @@ class _TaskDetailsState extends State<_TaskDetails> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Time entries',
+                            'Time entries: ${entries.length}',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ),
@@ -1083,9 +1077,8 @@ class _ErrorView extends StatelessWidget {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Error copied')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Error copied')));
   }
 }
 
@@ -1243,9 +1236,9 @@ class _TaskDialogState extends State<_TaskDialog> {
                                 widget.existingTask == null
                                     ? 'Add task'
                                     : 'Edit task',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineSmall,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall,
                               ),
                             ),
                           ),
