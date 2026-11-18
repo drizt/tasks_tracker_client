@@ -4,7 +4,8 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.14.0
+  flutter: '>=3.50.0'
 
 dependencies:
   flutter:
@@ -13,8 +14,8 @@ dependencies:
   highlight: ^0.7.0
   json_rpc_2: ^4.1.0
   markdown: ^7.3.1
-  nativeapi: ^0.5.10
-  nativeapi_flutter: ^0.5.10
+  nativeapi: ^0.6.1
+  nativeapi_flutter: ^0.6.1
   smart_date_formatter: ^2.4.0
   ulid: ^2.0.1
   web_socket_channel: ^3.0.3
