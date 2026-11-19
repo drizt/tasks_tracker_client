@@ -1,4 +1,8 @@
-import 'package:flutter/material.dart';
+// flutter_markdown_plus still uses Flutter's legacy Material types.
+
+// ignore: deprecated_member_use
+import 'package:flutter/material.dart' as legacy;
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:highlight/highlight.dart' as hl;
@@ -707,22 +711,32 @@ class _TaskDescription extends StatelessWidget {
             descriptionPainter.preferredLineHeight * 3;
         final canExpand = descriptionPainter.didExceedMaxLines;
         descriptionPainter.dispose();
-        final markdownStyleSheet = MarkdownStyleSheet.fromTheme(markdownTheme);
-        final descriptionMarkdown = MarkdownBody(
-          data: description,
-          selectable: true,
-          softLineBreak: true,
-          styleSheet: markdownStyleSheet.copyWith(
-            p: descriptionStyle,
-            code: markdownStyleSheet.code?.copyWith(
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              fontSize: descriptionStyle?.fontSize,
-              height: descriptionStyle?.height,
-              fontFamily: _monospaceFontFamily,
-              fontFamilyFallback: _monospaceFontFamilyFallback,
-            ),
+        // Bridge the theme and localizations until flutter_markdown_plus migrates.
+        // ignore: deprecated_member_use
+        final descriptionMarkdown = MaterialUiCompatibilityBridge(
+          child: Builder(
+            builder: (context) {
+              final markdownStyleSheet = MarkdownStyleSheet.fromTheme(
+                legacy.Theme.of(context),
+              );
+              return MarkdownBody(
+                data: description,
+                selectable: true,
+                softLineBreak: true,
+                styleSheet: markdownStyleSheet.copyWith(
+                  p: descriptionStyle,
+                  code: markdownStyleSheet.code?.copyWith(
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    fontSize: descriptionStyle?.fontSize,
+                    height: descriptionStyle?.height,
+                    fontFamily: _monospaceFontFamily,
+                    fontFamilyFallback: _monospaceFontFamilyFallback,
+                  ),
+                ),
+                builders: {'pre': _FencedCodeBuilder(theme.colorScheme)},
+              );
+            },
           ),
-          builders: {'pre': _FencedCodeBuilder(theme.colorScheme)},
         );
 
         return Row(

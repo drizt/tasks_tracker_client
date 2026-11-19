@@ -1,5 +1,8 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+// flutter_markdown_plus renders text using Flutter's legacy Material widgets.
+// ignore: deprecated_member_use
+import 'package:flutter/material.dart' as legacy;
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -531,12 +534,12 @@ void main() {
             .surfaceContainerHighest,
       );
       expect(find.text('**Task** under test'), findsNothing);
-      final renderedText = tester.widget<SelectableText>(
+      final renderedText = tester.widget<legacy.SelectableText>(
         find.descendant(
           of: descriptionArea,
           matching: find.byWidgetPredicate(
             (widget) =>
-                widget is SelectableText &&
+                widget is legacy.SelectableText &&
                 (widget.textSpan?.toPlainText().contains('Task under test') ??
                     false),
           ),
@@ -964,7 +967,7 @@ final plain = 1;
     expect(controller.entriesForTask('task-1'), hasLength(1));
     expect(controller.entriesForTask('task-1').single.endedAt, isNull);
     expect(find.textContaining('Running'), findsWidgets);
-    expect(find.text('1'), findsWidgets);
+    expect(find.text('Time entries: 1'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Stop timer'));
     await tester.pumpAndSettle();

@@ -2,7 +2,7 @@ import '../state/task_controller.dart';
 
 TaskTray createTaskTray({
   void Function()? exitApplication,
-  Future<void> Function()? toggleAppWindow,
+  void Function()? toggleAppWindow,
 }) {
   return TaskTray();
 }

@@ -1,11 +1,9 @@
-Future<void> initializeTaskWindow() async {}
-
 TaskWindow createTaskWindow() => TaskWindow();
 
 class TaskWindow {
-  Future<void> show() async {}
+  void show() {}
 
-  Future<void> toggle() async {}
+  void toggle() {}
 
-  Future<void> dispose() async {}
+  void dispose() {}
 }

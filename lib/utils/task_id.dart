@@ -1,5 +1,5 @@
 import 'package:ulid/ulid.dart';
 
 String createTaskId() {
-  return Ulid().toCanonical();
+  return Ulid().toBase32(lowercase: true);
 }

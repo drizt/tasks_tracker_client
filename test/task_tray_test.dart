@@ -90,7 +90,7 @@ void main() {
     final host = _FakeTaskTrayHost();
     final tray = TaskTray(
       host: host,
-      toggleAppWindow: () async {
+      toggleAppWindow: () {
         didToggle = true;
       },
     );

@@ -22,7 +22,7 @@ String taskTrayIconPath({required bool isActive, required bool isWindows}) {
 
 TaskTray createTaskTray({
   void Function()? exitApplication,
-  Future<void> Function()? toggleAppWindow,
+  VoidCallback? toggleAppWindow,
 }) {
   return TaskTray(
     exitApplication: exitApplication,
@@ -186,7 +186,7 @@ class TaskTray {
   }
 
   final void Function() _exitApplication;
-  final Future<void> Function()? toggleAppWindow;
+  final VoidCallback? toggleAppWindow;
   final TaskTrayHost _host;
   TaskController? _controller;
   Future<void> _operation = Future<void>.value();
@@ -260,7 +260,7 @@ class TaskTray {
   }
 
   void _toggleAppWindow() {
-    unawaited(toggleAppWindow?.call());
+    toggleAppWindow?.call();
   }
 
   void _openContextMenu() {

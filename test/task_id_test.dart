@@ -8,6 +8,6 @@ void main() {
 
     expect(id, hasLength(26));
     expect(id, matches(RegExp(r'^[0-9a-hjkmnp-tv-z]{26}$')));
-    expect(Ulid.parse(id).toCanonical(), id);
+    expect(Ulid.parse(id).toBase32(lowercase: true), id);
   });
 }

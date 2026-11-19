@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../state/task_controller.dart';
 import '../utils/duration_format.dart';
@@ -32,9 +32,8 @@ class ActiveTimerBar extends StatelessWidget {
           ),
           Text(
             formatDuration(controller.activeElapsed),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
           ),
           const SizedBox(width: 16),
           FilledButton.icon(

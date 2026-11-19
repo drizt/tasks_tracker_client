@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'data/client_settings.dart';
 import 'data/client_settings_store.dart';
@@ -98,9 +98,8 @@ class _TasksTrackerAppState extends State<TasksTrackerApp> {
         return;
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(exception.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(exception.toString())));
       return;
     }
 
@@ -108,9 +107,8 @@ class _TasksTrackerAppState extends State<TasksTrackerApp> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Server saved')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Server saved')));
   }
 
   @override
@@ -119,7 +117,7 @@ class _TasksTrackerAppState extends State<TasksTrackerApp> {
     controller?.dispose();
     unawaited(repository?.close());
     unawaited(taskTray.dispose());
-    unawaited(taskWindow.dispose());
+    taskWindow.dispose();
     super.dispose();
   }
 

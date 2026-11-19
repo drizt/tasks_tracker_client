@@ -1,169 +1,146 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:window_manager/window_manager.dart';
-
-Future<void> initializeTaskWindow() async {
-  if (!_isSupported) {
-    return;
-  }
-
-  await windowManager.ensureInitialized();
-  await windowManager.setPreventClose(true);
-}
+import 'package:nativeapi/nativeapi.dart' as native;
 
 TaskWindow createTaskWindow({TaskWindowHost? host}) {
   return TaskWindow(host: host);
 }
 
-enum TaskWindowState {
-  hidden,
-  minimized,
-  shown;
-
-  static TaskWindowState fromName(String? name) {
-    return switch (name) {
-      'shown' => TaskWindowState.shown,
-      'minimized' => TaskWindowState.minimized,
-      _ => TaskWindowState.hidden,
-    };
-  }
-}
+enum TaskWindowState { hidden, minimized, shown }
 
 abstract interface class TaskWindowHost {
-  void addListener(WindowListener listener);
+  void setCloseHandler(VoidCallback? onClose);
 
-  void removeListener(WindowListener listener);
+  void focus();
 
-  Future<void> focus();
+  void hide();
 
-  Future<void> hide();
+  TaskWindowState getState();
 
-  Future<TaskWindowState> getState();
-
-  Future<void> setPreventClose(bool isPreventClose);
-
-  Future<void> show();
+  void show();
 }
 
 class SystemTaskWindowHost implements TaskWindowHost {
-  const SystemTaskWindowHost();
+  SystemTaskWindowHost({this._window});
 
-  static const MethodChannel _channel = MethodChannel('tasks_tracker/window');
+  native.Window? _window;
+  native.ListenerId? _closeListenerId;
 
-  @override
-  void addListener(WindowListener listener) {
-    windowManager.addListener(listener);
-  }
-
-  @override
-  void removeListener(WindowListener listener) {
-    windowManager.removeListener(listener);
-  }
+  native.Window get _target => _window ??=
+      native.WindowManager.instance.getCurrent() ??
+      (throw StateError('Cannot find app window'));
 
   @override
-  Future<void> focus() {
-    return windowManager.focus();
-  }
+  void setCloseHandler(VoidCallback? onClose) {
+    final previousId = _closeListenerId;
 
-  @override
-  Future<void> hide() {
-    return windowManager.hide();
-  }
-
-  @override
-  Future<TaskWindowState> getState() async {
-    if (Platform.isLinux) {
-      final stateName = await _channel.invokeMethod<String>('getState');
-      return TaskWindowState.fromName(stateName);
+    if (previousId != null) {
+      _target.removeListener(previousId);
+      _closeListenerId = null;
     }
 
-    if (await windowManager.isMinimized()) {
+    if (onClose != null) {
+      _closeListenerId = _target.addListener((event) {
+        if (event is native.WindowCloseRequestedEvent) {
+          event.request.cancel();
+          onClose();
+        }
+      });
+    }
+  }
+
+  @override
+  void focus() {
+    _target.focus();
+  }
+
+  @override
+  void hide() {
+    _target.hide();
+  }
+
+  @override
+  TaskWindowState getState() {
+    if (!_target.isVisible) {
+      return TaskWindowState.hidden;
+    }
+
+    // Linux also reports unmapped or withdrawn windows as occluded.
+    if (_target.isMinimized ||
+        (Platform.isLinux &&
+            _target.occlusionState == native.WindowOcclusionState.occluded)) {
       return TaskWindowState.minimized;
     }
 
-    if (await windowManager.isVisible()) {
-      return TaskWindowState.shown;
+    return TaskWindowState.shown;
+  }
+
+  @override
+  void show() {
+    if (_target.isMinimized) {
+      _target.restore();
     }
 
-    return TaskWindowState.hidden;
-  }
-
-  @override
-  Future<void> setPreventClose(bool isPreventClose) {
-    return windowManager.setPreventClose(isPreventClose);
-  }
-
-  @override
-  Future<void> show() {
-    return windowManager.show();
+    _target.show();
   }
 }
 
-class TaskWindow with WindowListener {
-  TaskWindow({TaskWindowHost? host})
-    : _host = host ?? const SystemTaskWindowHost() {
+class TaskWindow {
+  TaskWindow({TaskWindowHost? host}) : _host = host ?? SystemTaskWindowHost() {
     if (_isSupported) {
-      _host.addListener(this);
+      _host.setCloseHandler(_onWindowClose);
     }
   }
 
   final TaskWindowHost _host;
-  Future<void> _operation = Future<void>.value();
   bool _isDisposed = false;
 
-  @visibleForTesting
-  Future<void> get idle => _operation;
-
-  Future<void> show() {
-    return _enqueue(_showAndFocus);
+  void show() {
+    _run(_showAndFocus);
   }
 
-  Future<void> toggle() {
-    return _enqueue(() async {
-      final state = await _host.getState();
+  void toggle() {
+    _run(() {
+      final state = _host.getState();
+
       if (state == TaskWindowState.shown) {
-        await _host.hide();
+        _host.hide();
         return;
       }
 
-      await _showAndFocus();
+      _showAndFocus();
     });
   }
 
-  @override
-  void onWindowClose() {
-    _enqueue(_host.hide);
+  void _onWindowClose() {
+    _run(_host.hide);
   }
 
-  Future<void> dispose() async {
+  void dispose() {
     if (_isDisposed) {
       return;
     }
 
     _isDisposed = true;
     if (_isSupported) {
-      _host.removeListener(this);
-      await _operation;
-      await _host.setPreventClose(false);
+      _host.setCloseHandler(null);
     }
   }
 
-  Future<void> _enqueue(Future<void> Function() action) {
+  void _run(VoidCallback action) {
     if (!_isSupported || _isDisposed) {
-      return Future<void>.value();
+      return;
     }
 
-    _operation = _operation
-        .then((_) => action())
-        .catchError((Object error, StackTrace stackTrace) {});
-    return _operation;
+    try {
+      action();
+    } on Object catch (_) {}
   }
 
-  Future<void> _showAndFocus() async {
-    await _host.show();
-    await _host.focus();
+  void _showAndFocus() {
+    _host.show();
+    _host.focus();
   }
 }
 
